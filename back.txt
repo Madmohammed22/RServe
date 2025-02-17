@@ -1,0 +1,328 @@
+    /* At this part we are creating a socket, and checking if an
+    error may accure, if it does we must incounter return value
+    of an correct creating a socket is -1. */
+
+    int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (serverSocket < 0)
+        return perror("opening stream socket."), EXIT_FAILURE;
+
+    /* We define so set of info related to the socket like wich family
+    is used when it comes to the versin of IPs
+    and port by using htons that transform an unsigned machine
+    byte order to network byte order. as well as sin_addr which define
+    we can work and listen with all the available IPs */
+
+    sockaddr_in serverAddress;
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_port = htons(8080);
+    serverAddress.sin_addr.s_addr = INADDR_ANY;
+    int len = sizeof(serverAddress);
+    /* bind() is used to bind a socket to a specific address and port,
+    making the socket listen for incoming connection requests on that address and port */
+
+    if (bind(serverSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0)
+        return perror("binding stream socket."), EXIT_FAILURE;
+
+    /* Find out assigned port and print it out with the help of getsockname function*/
+    if (getsockname(serverSocket, (struct sockaddr *)&serverAddress, (socklen_t *)&len) == -1)
+        return perror("getting socket name."), EXIT_FAILURE;
+    std::cout << "Socket port " << ntohs(serverAddress.sin_port) << std::endl;
+
+    /* The listen() function applies only to stream sockets. It indicates a readiness to accept
+    client connection requests, and creates a connection request queue of length
+    backlog to queue incoming connection requests */
+    /* Start accepting connections. */
+    if (listen(serverSocket, 5) < 0)
+        return perror("listen stream socket"), EXIT_FAILURE;
+
+
+To get extra information about running multiple media content in your web server, you can search for the following topics:
+
+Serving Static Files in Web Servers: This will give you an overview of how to configure your web server to serve different types of files like HTML, CSS, JavaScript, images, videos, etc.
+MIME Types Configuration: Learn about configuring the correct MIME types for different file extensions to ensure they are handled properly by the browser.
+C++ Web Server Examples: Look for examples and tutorials on how to implement a web server in C++, which often include handling various media types.
+HTTP Response Headers: Understand the different HTTP response headers, especially Content-Type, and how to set them based on the file type.
+Asynchronous File Serving: Learn about asynchronous or non-blocking I/O operations to efficiently serve multiple media files simultaneously.
+File Streaming in C++: Find information on how to stream large files (like videos) in chunks to avoid loading the entire file into memory.
+These search terms should help you find detailed guides, examples, and best practices for serving multiple types of media content from your web server.
+
+Suggested Search Queries:
+"Serving static files in C++ web server"
+"MIME types configuration for web server"
+"C++ web server handling HTML CSS MP4"
+"HTTP response headers for media files"
+"Asynchronous file serving in C++"
+"Streaming large files in C++ web server"
+These queries should provide you with a good amount of information to enhance your web server's capabilities.
+
+    //*/
+   /*
+    do
+    {
+        msgsocket = accept(serverSocket, (struct sockaddr *)&clientAddress, &clientLen);
+        if (msgsocket < 0)
+            return perror("accept stream socket"), delete server,  EXIT_FAILURE;
+        else
+        {
+            do
+            {
+
+                memset(buffer, 0, sizeof(buffer));
+                rval = recv(msgsocket, buffer, sizeof(buffer), 0);
+                if (rval == 0)
+                    std::cout << "Ending connections" << std::endl;
+                else
+                {
+                    std::string request(buffer);
+                    std::string filePath = server->parsRequest(request);
+                    std::string content = readFile(filePath);
+                    if (content.empty())
+                    {
+                        std::string new_path = "/var/www/Errors/404/" + server->parsRequest404(request);
+                        std::ifstream file(new_path.c_str());
+                        if (!file.is_open())
+                            return  perror(NULL), delete server, EXIT_FAILURE;
+
+                        std::string contentType = server->getContentType(new_path);
+                        std::string notFound = server->creatHttpResponseForPage404(contentType, file);
+                        send(msgsocket, notFound.c_str(), notFound.length(), 0);
+                    }
+                    else
+                    {
+                        std::string contentType = server->getContentType(filePath);
+                        std::string httpResponse = server->creatHttpResponse(contentType, content);
+                        send(msgsocket, httpResponse.c_str(), httpResponse.length(), 0);
+                    }
+                }
+            } while (rval > 0);
+            close(msgsocket);
+        }
+    } while (true);
+    */
+
+    /----------------------
+
+        /*
+    std::vector<struct pollfd> poll_fds;
+    struct pollfd server_poll_fd;
+    server_poll_fd.fd = serverSocket;
+    server_poll_fd.events = POLLIN;
+    poll_fds.push_back(server_poll_fd);
+
+    while (true)
+    {
+
+        int num_fds = poll(&poll_fds[0], poll_fds.size(), 0);
+        if (num_fds < 0)
+        {
+            std::cout << "Poll error" << std::endl;
+            continue;
+        }
+
+        for (std::vector<struct pollfd>::iterator it = poll_fds.begin(); it != poll_fds.end();)
+        {
+            // if (std::find(poll_fds.begin(), poll_fds.end(), ))
+            if (it->fd == serverSocket && it->revents & POLLIN)
+            {
+                int new_socket = accept(serverSocket, (struct sockaddr *)&clientAddress, &clientLen);
+                if (new_socket < 0)
+                {
+                    std::cerr << "Accept error" << std::endl;
+                    continue;
+                }
+
+                struct pollfd client_poll_fd;
+                client_poll_fd.fd = new_socket;
+                client_poll_fd.events = POLLIN;
+                poll_fds.push_back(client_poll_fd);
+                ++it;
+            }
+            else if (it->revents && POLLIN)
+            {
+                memset(buffer, 0, sizeof(buffer));
+                rval = recv(it->fd, buffer, sizeof(buffer), 0); //
+                if (rval == 0)
+                {
+                    std::cout << "Client disconnected" << std::endl;
+                    close(it->fd);
+                    it = poll_fds.erase(it);
+                }
+                else
+                {
+                    std::string request(buffer);
+                    std::string filePath = server->parsRequest(request);
+                    std::string content = readFile(filePath);
+                    if (content.empty())
+                    {
+                        std::string path1 = "/var/www/Errors/404/";
+                        std::string path2 = "errorPage.html";
+                        std::string new_path = path1 + path2;
+                        std::ifstream file(new_path.c_str());
+                        if (!file.is_open())
+                            return perror(NULL), delete server, EXIT_FAILURE;
+
+                        std::string contentType = server->getContentType(new_path);
+                        std::string notFound = server->creatHttpResponseForPage404(contentType, file);
+                        send(it->fd, notFound.c_str(), notFound.length(), 0);
+                    }
+                    else
+                    {
+                        std::string contentType = server->getContentType(filePath);
+                        std::string httpResponse = server->creatHttpResponse(contentType, content);
+                        send(it->fd, httpResponse.c_str(), httpResponse.length(), 0);
+                    }
+                    ++it;
+                }
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+    */
+
+    //----------
+
+
+        if (path.find("=") != std::string::npos)
+    {
+        std::string test = path.substr(path.find("=") + 1, path.length());
+        std::cout << "<<<<<[" << test << ">>>>>]" << "\n";
+        test = "/var/www/Resources/" + test;
+        std::ifstream file1(test.c_str());
+        if (!file1.is_open())
+            std::cout << "I was here" << std::endl;
+        else
+        {
+            std::stringstream content;
+            content << file1.rdbuf();
+            file1.close();
+            for (size_t i = 0; i < content.str().length(); i++)
+            {
+                std::cout << content.str().at(i);
+            }
+            std::cout << "I was here is able to open " << content.str().length() << std::endl;
+        }
+        return "";
+    }
+
+
+//-----------
+
+/*
+std::string readFile(const std::string &path, int fd)
+{
+    (void)fd;
+    if (path.empty())
+        return "";
+    // int fds = open(path.c_str(), O_RDONLY, 0777);
+    // if (fds < 0){
+    //     std::cout << "I was here motherfucker\n";
+    //     return "";
+    // }
+    // size_t chars_read = read(fds, buffer, sizeof(buffer));
+    // if (chars_read == 0){
+    //     std::cout << "I got EOF\n";
+    //     return "";
+    // }
+
+    // buffer[BUFFER_SIZE] = '\0';
+    // std::string r = buffer;
+    // return r;
+
+
+    // char buffer[BUFFER_SIZE + 1];
+    std::ifstream infile(path.c_str(), std::ios::binary);
+    std::stringstream content;
+    content << infile.rdbuf();
+    std::string r = content.str();
+    return r;
+    // // Read file
+    // infile.read(buffer, sizeof(buffer));
+    // if (!infile.eof())
+    // {
+    //     buffer[BUFFER_SIZE] = '\0';
+    //     std::string r = buffer;
+    //     close(fd);
+    //     return r;
+    // }
+
+    // chars_read = infile.gcount();
+    // if (chars_read > 0)
+    // {
+    //     std::cout << "I was here\n";
+    //     buffer[BUFFER_SIZE] = '\0';
+    //     std::string r2 = buffer;
+    //     return r2;
+    // }
+    // std::cout << "I was here 2\n";
+    // return "";
+}
+
+// how I coud use Chunked transfer encoding instead of reading the whole file at once
+*/
+
+//--------------------
+
+
+
+    //-------------------
+
+    // ev.events = EPOLLIN;
+    // ev.data.fd = listen_sock;
+    // if (epoll_ctl(epollfd, EPOLL_CTL_ADD, listen_sock, &ev) == -1)
+    //     return std::cerr << "epoll_ctl: listen_sock" << std::endl, EXIT_FAILURE;
+
+    // std::string httpResponse = "HTTP/1.1 200 OK\r\nDate: Mon, 20 Jan 2025 12:00:00 GMT\r\nServer: Apache/2.4.41 (Ubuntu)\r\nContent-Type: text/html\r\nContent-Length: 1234\r\n\r\n<html>\r\n<head><title>Example Page</title></head>\r\n<body>\r\n<h1>Welcome to the Example Page</h1>\r\n</body>\r\n</html>";
+
+    // while (true)
+    // {
+
+    //     nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
+    //     if (nfds == -1)
+    //         return std::cerr << "epoll_wait" << std::endl, EXIT_FAILURE;
+    //     int n = 0;
+    //     int d = 0;
+    //     for (n = 0; n < nfds; n++)
+    //     {
+    //         if (events[n].data.fd == listen_sock)
+    //         {
+    //             std::cout << "connection ...\n";
+    //             conn_sock = accept(listen_sock, (struct sockaddr *)&clientAddress, &clientLen);
+    //             if (conn_sock == -1)
+    //                 return std::cerr << "accept" << std::endl, EXIT_FAILURE;
+    //             setnonblocking(conn_sock);
+    //             ev.events = EPOLLIN | EPOLLOUT;
+    //             ev.data.fd = conn_sock;
+    //             if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &ev) == -1)
+    //                 return std::cerr << "epoll_ctl: conn_sock" << std::endl, EXIT_FAILURE;
+    //         }
+    //         else if (events[n].events & EPOLLIN)
+    //         {
+    //             std::cout << "+++++++++++++++++block request ....." << endl;
+    //             char buffer[CHUNK_SIZE];
+    //             int len = recv(events[n].data.fd, buffer, CHUNK_SIZE, 0);
+    //             buffer[len] = '\0';
+    //             if (len != CHUNK_SIZE)
+    //             {
+    //                 epoll_event ev1;
+    //                 ev1.events = EPOLLOUT;
+    //                 ev1.data.fd = events[n].data.fd;
+    //                 if (epoll_ctl(epollfd, EPOLL_CTL_MOD, events[n].data.fd, &ev1) == -1)
+    //                     return std::cerr << "epoll_ctl: conn_sock11" << std::endl, EXIT_FAILURE;
+    //             }
+    //             std::cout << buffer << std::endl;
+    //         }
+    //         else if (events[n].events & EPOLLOUT)
+    //         {
+    //             std::cout << "+++++++++++++++++block respond ....." << endl;
+
+    //             send(events[n].data.fd, httpResponse.c_str(), httpResponse.size(), 0);
+    //             close(events[n].data.fd);
+    //             // int r = do_use_fd(events[n].data.fd, server);
+    //             // if (r == -1)
+    //             //     EXIT_FAILURE;
+    //         }
+    //     }
+    // }
