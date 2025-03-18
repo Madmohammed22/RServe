@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:14 by mmad              #+#    #+#             */
-/*   Updated: 2025/03/18 15:12:45 by mmad             ###   ########.fr       */
+/*   Updated: 2025/03/18 16:12:00 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -76,7 +76,7 @@ std::string Server::getContentType(const std::string &path)
 
 std::string readFile(const std::string &path)
 {
-    std::stringstream content;
+    // std::stringstream content;
     if (path.empty())
         return "";
 
@@ -84,13 +84,9 @@ std::string readFile(const std::string &path)
     if (!infile)
         return std::cerr << "Failed to open file: " << path << std::endl, "";
 
-    char buffer[CHUNK_SIZE];
-    while (infile.read(buffer, CHUNK_SIZE) || infile.gcount() > 0)
-    {
-        content.write(buffer, infile.gcount());
-    }
-
-    return content.str();
+    std::ostringstream oss;
+    oss << infile.rdbuf();
+    return oss.str();
 }
 
 std::string parseRequest(std::string request)
@@ -112,6 +108,7 @@ std::string parseRequest(std::string request)
             }
         }
     }
+    // std::cout << "--> " << filePath << "\n";
     return filePath;
 }
 
@@ -148,6 +145,7 @@ bool canBeOpen(std::string &filePath)
     if (!file.is_open())
         return std::cerr << "Failed to open file:: " << new_path << std::endl, false;
     filePath = new_path;
+    std::cout << "--> "<< filePath << "\n";
     return true;
 }
 
@@ -159,7 +157,9 @@ int do_use_fd(int fd, Server *server, std::string request)
     std::string content;
     if (canBeOpen(filePath) == true)
     {
+        // std::cout << "I was here\n";
         content = readFile(filePath);
+        std::cout << "==> " << content << std::endl;
         std::string httpResponse = createHttpResponse(server->getContentType(filePath));
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send." << std::endl, -1;
@@ -252,18 +252,19 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
         }
         if (events[i].events & EPOLLOUT)
         {
+            // std::cout << send_buffers[events[i].data.fd] << std::endl;
             request = send_buffers[events[i].data.fd];
             if (request.empty())
                 return 0;
             if (request.find("POST") != std::string::npos)
             {
-                std::string body = request.substr(request.find("\r\n\r\n") + 4);
-                send_buffers[events[i].data.fd] = body;
+                // std::string body = request.substr(request.find("\r\n\r\n") + 4);
+                // send_buffers[events[i].data.fd] = body;
             }
             else if (request.find("DELETE") != std::string::npos)
             {
-                std::string body = request.substr(request.find("\r\n\r\n") + 4);
-                send_buffers[events[i].data.fd] = body;
+                // std::string body = request.substr(request.find("\r\n\r\n") + 4);
+                // send_buffers[events[i].data.fd] = body;
             }
             else if (request.find("GET") != std::string::npos) 
             {
