@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   server.cpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/03/18 03:11:14 by mmad              #+#    #+#             */
+/*   Updated: 2025/03/18 03:18:10 by mmad             ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "server.hpp"
 #include <iostream>
 #include <fstream>
@@ -57,9 +69,7 @@ std::string Server::getContentType(const std::string &path)
         std::string extension = path.substr(dotPos);
         std::map<std::string, std::string>::const_iterator it = extensionToType.find(extension);
         if (it != extensionToType.end())
-        {
             return it->second;
-        }
     }
     return "application/octet-stream";
 }
@@ -83,7 +93,7 @@ std::string readFile(const std::string &path)
     return content.str();
 }
 
-std::string Server::parseRequest(std::string request)
+std::string parseRequest(std::string request)
 {
     if (request.empty())
         return "";
@@ -105,7 +115,7 @@ std::string Server::parseRequest(std::string request)
     return filePath;
 }
 
-std::string Server::createHttpResponse(std::string contentType)
+std::string createHttpResponse(std::string contentType)
 {
     return "HTTP/1.1 200 OK\r\nContent-Type: " + contentType + "\r\n\r\n";;
 }
@@ -133,7 +143,7 @@ void setnonblocking(int fd)
 bool canBeOpen(std::string &filePath)
 {
     std::string new_path;
-    new_path = "/home/mmad/resources/" + filePath;
+    new_path = PATHC + filePath;
     std::ifstream file(new_path.c_str());
     if (!file.is_open())
         return std::cerr << "Failed to open file:: " << new_path << std::endl, false;
@@ -145,12 +155,12 @@ int do_use_fd(int fd, Server *server, std::string request)
 {
     if (request.empty())
         return -1;
-    std::string filePath = server->parseRequest(request);
+    std::string filePath = parseRequest(request);
     std::string content;
     if (canBeOpen(filePath) == true)
     {
         content = readFile(filePath);
-        std::string httpResponse = server->createHttpResponse(server->getContentType(filePath));
+        std::string httpResponse = createHttpResponse(server->getContentType(filePath));
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send." << std::endl, -1;
         if (send(fd, content.c_str(), content.length(), MSG_NOSIGNAL) == -1)
@@ -159,8 +169,8 @@ int do_use_fd(int fd, Server *server, std::string request)
     }
     else
     {
-        std::string path1 = "/home/mmad/resources/";
-        std::string path2 = "error.html";
+        std::string path1 = PATHE;
+        std::string path2 = "index.html";
         std::string new_path = path1 + path2;
         std::string content = readFile(new_path);
         std::string httpResponse = errorPageNoteFound(server->getContentType(new_path));
@@ -182,7 +192,7 @@ int Server::establishingServer(Server *server)
 
     sockaddr_in serverAddress;
     serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(8080);
+    serverAddress.sin_port = htons(PORT);
     serverAddress.sin_addr.s_addr = INADDR_ANY;
     int len = sizeof(serverAddress);
     int a = 1;
@@ -206,7 +216,6 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
     char buffer[CHUNK_SIZE];
     std::string request;
     struct epoll_event events[MAX_EVENTS];
-    // int timeout = -1;
     int nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
     if (nfds == -1)
         return std::cerr << "epoll_wait" << std::endl, EXIT_FAILURE;
@@ -225,20 +234,12 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
         }
         else if (events[i].events & EPOLLIN)
         {
-            time_t now = time(0);
-
-            if (now % 2 == 0)
-            {
-                close(events[i].data.fd);
-                continue;
-            }
-
             std::cout << "EPOLLIN" << std::endl;
             int bytes = recv(events[i].data.fd, buffer, sizeof(buffer), 0);
             if (bytes == -1)
                 return std::cerr << "recv" << std::endl, EXIT_FAILURE;
             else if (bytes == 0){
-                // close(events[i].data.fd);
+                close(events[i].data.fd);
                 continue; 
             }
             else{

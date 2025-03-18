@@ -1,15 +1,15 @@
 #include "server.hpp"
 
-Reader::Reader()
+ConfigurationFile::ConfigurationFile()
 {
 }
 
-Reader::Reader(const Reader &Init)
+ConfigurationFile::ConfigurationFile(const ConfigurationFile &Init)
 {
     (void)Init;
 }
 
-Reader &Reader::operator=(const Reader &Init)
+ConfigurationFile &ConfigurationFile::operator=(const ConfigurationFile &Init)
 {
     if (this == &Init)
         return *this;
@@ -17,11 +17,11 @@ Reader &Reader::operator=(const Reader &Init)
     return *this;
 }
 
-Reader::~Reader()
+ConfigurationFile::~ConfigurationFile()
 {
 }
 
-bool Reader::TheBalancedParentheses(std::string file)
+bool ConfigurationFile::TheBalancedParentheses(std::string file)
 {
     std::ifstream fileName(file.c_str());
     std::stack<char> s;

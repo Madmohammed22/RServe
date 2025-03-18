@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   server.hpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/03/18 03:11:18 by mmad              #+#    #+#             */
+/*   Updated: 2025/03/18 03:17:22 by mmad             ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
@@ -27,10 +39,9 @@
 
 #define CHUNK_SIZE 1024
 #define MAX_EVENTS 10
-
-// curl -i -X GET http://localhost:4221/index.html
-
-
+#define PORT 8080
+#define PATHC "/home/mmad/Desktop/webserve/root/content/"
+#define PATHE "/home/mmad/Desktop/webserve/root/error/"
 class Server
 {
 public:
@@ -46,21 +57,17 @@ public:
     std::string parsRequest(std::string request);
     std::string parsRequest404(std::string request);
     std::string getContentType(const std::string &path);
-    std::string creatHttpResponse(std::string contentType);
-    std::string creatHttpResponseForPage404(std::string contentType, std::ifstream &file, std::string& s_content);
-    std::string Server::parseRequest(std::string request);
-    std::string Server::createHttpResponse(std::string contentType);
 };
 
-class Reader{
+class ConfigurationFile{
 private :
     std::vector<std::string> buffer;
 
 public:
-    Reader();
-    Reader(const Reader& Init);
-    Reader& operator=(const Reader& Init);
-    ~Reader();
+    ConfigurationFile();
+    ConfigurationFile(const ConfigurationFile& Init);
+    ConfigurationFile& operator=(const ConfigurationFile& Init);
+    ~ConfigurationFile();
 
 public:
     bool TheBalancedParentheses(std::string file);

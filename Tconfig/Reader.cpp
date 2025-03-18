@@ -1,20 +1,20 @@
 #include "Reader.hpp"
 
-Reader::Reader()
+ConfigurationFile::ConfigurationFile()
 {
     // std::cout << "[Reader] constructor is called" << std::endl;
 }
 
-Reader::Reader(const Reader& Init){
+ConfigurationFile::ConfigurationFile(const ConfigurationFile& Init){
     (void)Init;
     // std::cout << "[Reader] parametrize constructor is called" << std::endl;
 }
 
-Reader& Reader::operator=(const Reader& Init){
+ConfigurationFile& ConfigurationFile::operator=(const ConfigurationFile& Init){
     if (this == &Init)
         return *this;
 }
-Reader::~Reader()
+ConfigurationFile::~ConfigurationFile()
 {
     // std::cout << "[Reader] distructor is called" << std::endl;
 }

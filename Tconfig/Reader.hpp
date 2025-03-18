@@ -15,15 +15,15 @@
 
 using namespace std;
 
-class Reader
+class ConfigurationFile
 {
 private:
     std::vector<std::string> buffer;    
 public:
-    Reader();
-    Reader(const Reader& Init);
-    Reader& operator=(const Reader& Init);
-    ~Reader();
+    ConfigurationFile();
+    ConfigurationFile(const ConfigurationFile& Init);
+    ConfigurationFile& operator=(const ConfigurationFile& Init);
+    ~ConfigurationFile();
 };
 
 
