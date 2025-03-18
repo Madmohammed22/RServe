@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:14 by mmad              #+#    #+#             */
-/*   Updated: 2025/03/18 16:12:00 by mmad             ###   ########.fr       */
+/*   Updated: 2025/03/18 21:42:34 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -108,7 +108,6 @@ std::string parseRequest(std::string request)
             }
         }
     }
-    // std::cout << "--> " << filePath << "\n";
     return filePath;
 }
 
@@ -157,9 +156,7 @@ int do_use_fd(int fd, Server *server, std::string request)
     std::string content;
     if (canBeOpen(filePath) == true)
     {
-        // std::cout << "I was here\n";
         content = readFile(filePath);
-        std::cout << "==> " << content << std::endl;
         std::string httpResponse = createHttpResponse(server->getContentType(filePath));
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send." << std::endl, -1;
@@ -268,10 +265,11 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
             }
             else if (request.find("GET") != std::string::npos) 
             {
-                do_use_fd(events[i].data.fd, server, request);
+                if (do_use_fd(events[i].data.fd, server, request) == -1)
+                    return EXIT_FAILURE;
             }
             else 
-                return -1;  
+                return EXIT_FAILURE;  
         }
     }
 
@@ -280,6 +278,7 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
 
 int main()
 {
+    // ----------------------
     Server *server = new Server();
 
     sockaddr_in clientAddress;
