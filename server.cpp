@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:14 by mmad              #+#    #+#             */
-/*   Updated: 2025/03/18 03:18:10 by mmad             ###   ########.fr       */
+/*   Updated: 2025/03/18 03:51:27 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -216,8 +216,9 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
     char buffer[CHUNK_SIZE];
     std::string request;
     struct epoll_event events[MAX_EVENTS];
-    int nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
-    if (nfds == -1)
+    int nfds;
+
+    if ((nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1)) == -1)
         return std::cerr << "epoll_wait" << std::endl, EXIT_FAILURE;
     for (int i = 0; i < nfds; ++i)
     {
@@ -251,6 +252,11 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
         if (events[i].events & EPOLLOUT)
         {
             request = send_buffers[events[i].data.fd];
+            if (request.empty())
+                return 0;
+            std::cout << "------------------\n";
+            std::cout << request << std::endl;
+            std::cout << "------------------\n";
             if (request.find("POST") != std::string::npos)
             {
                 std::string body = request.substr(request.find("\r\n\r\n") + 4);
@@ -280,14 +286,12 @@ int main()
     sockaddr_in clientAddress;
     socklen_t clientLen = sizeof(clientAddress);
     int listen_sock, epollfd;
+    struct epoll_event ev;
+
     listen_sock = server->establishingServer(server);
     std::cout << "Server is listening" << std::endl;
-
-    epollfd = epoll_create1(0);
-    if (epollfd < 0)
-        return std::cerr << "Failed to create epoll file descriptor" << std::endl, EXIT_FAILURE;
-
-    struct epoll_event ev;
+    if ((epollfd = epoll_create1(0)) == -1)
+        return std::cout << "Failed to create epoll file descriptor" << std::endl, EXIT_FAILURE;
     ev.events = EPOLLIN | EPOLLET;
     ev.data.fd = listen_sock;
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, listen_sock, &ev) == -1)
