@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:14 by mmad              #+#    #+#             */
-/*   Updated: 2025/03/18 03:51:27 by mmad             ###   ########.fr       */
+/*   Updated: 2025/03/18 15:12:45 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -185,10 +185,11 @@ int do_use_fd(int fd, Server *server, std::string request)
 
 int Server::establishingServer(Server *server)
 {
+    (void)server;
     int serverSocket = 0;
     serverSocket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, getprotobyname("tcp")->p_proto);
     if (serverSocket < 0)
-        return delete server, std::cerr << "opening stream socket." << std::endl, EXIT_FAILURE;
+        return std::cerr << "opening stream socket." << std::endl, EXIT_FAILURE;
 
     sockaddr_in serverAddress;
     serverAddress.sin_family = AF_INET;
@@ -197,16 +198,16 @@ int Server::establishingServer(Server *server)
     int len = sizeof(serverAddress);
     int a = 1;
     if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEPORT, &a, sizeof(int)) < 0)
-        return perror(NULL), delete server, EXIT_FAILURE;
+        return perror(NULL), EXIT_FAILURE;
     if (bind(serverSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) == -1)
-        return perror("binding stream socket"), delete server, EXIT_FAILURE;
+        return perror("binding stream socket"), EXIT_FAILURE;
 
     if (getsockname(serverSocket, (struct sockaddr *)&serverAddress, (socklen_t *)&len) == -1)
-        return perror("getting socket name."), delete server, EXIT_FAILURE;
+        return perror("getting socket name."), EXIT_FAILURE;
     std::cout << "Socket port " << ntohs(serverAddress.sin_port) << std::endl;
 
     if (listen(serverSocket, 5) < 0)
-        return perror("listen stream socket"), delete server, EXIT_FAILURE;
+        return perror("listen stream socket"), EXIT_FAILURE;
     return serverSocket;
 }
 
@@ -254,9 +255,6 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
             request = send_buffers[events[i].data.fd];
             if (request.empty())
                 return 0;
-            std::cout << "------------------\n";
-            std::cout << request << std::endl;
-            std::cout << "------------------\n";
             if (request.find("POST") != std::string::npos)
             {
                 std::string body = request.substr(request.find("\r\n\r\n") + 4);
