@@ -36,12 +36,12 @@
 #include <fcntl.h>
 #include <string>
 
+#define PORT 8080 
+#define MAX_EVENTS 10 
+#define CHUNK_SIZE 8192 
+#define PATHC "/workspaces/Dwebserve/root/content/static/"
+#define PATHE "/workspaces/Dwebserve/root/content/error/" 
 
-#define CHUNK_SIZE 1024
-#define MAX_EVENTS 10
-#define PORT 8080
-#define PATHC "/home/mmad/Desktop/webserve/root/content/"
-#define PATHE "/home/mmad/Desktop/webserve/root/error/"
 class Server
 {
 public:
