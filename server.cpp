@@ -24,8 +24,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>  // Added for getprotobyname
 #include <iomanip>  // Added for std::hex, std::setw, std::setfill
-// #define CHUNK_SIZEE 1048576 
-
 
 Server::Server()
 {
@@ -172,18 +170,6 @@ bool canBeOpen(std::string &filePath)
     return true;
 }
 
-// Structure to hold file transfer state
-struct FileTransferState {
-    std::string filePath;
-    size_t offset;
-    size_t fileSize;
-    bool isComplete;
-    
-    FileTransferState() : offset(0), fileSize(0), isComplete(false) {}
-};
-
-// Map to keep track of file transfers for each client
-std::map<int, FileTransferState> fileTransfers;
 
 // Send a chunk of data using chunked encoding
 bool sendChunk(int fd, const char* data, size_t size)
@@ -217,21 +203,14 @@ bool sendFinalChunk(int fd)
 }
 
 // Continue sending chunks for an in-progress file transfer
-int continueFileTransfer(int fd)
+int continueFileTransfer(int fd, Server * server)
 {
-    if (fileTransfers.find(fd) == fileTransfers.end())
-    {
-        std::cerr << "No file transfer in progress for fd: " << fd << std::endl;
-        return -1;
-    }
+    if (server->fileTransfers.find(fd) == server->fileTransfers.end())
+        return std::cerr << "No file transfer in progress for fd: " << fd << std::endl, -1;
     
-    FileTransferState &state = fileTransfers[fd];
-    if (state.isComplete)
-    {
-        // Transfer already completed
-        fileTransfers.erase(fd);
-        return 0;
-    }
+    FileTransferState &state = server->fileTransfers[fd];
+    if (state.isComplete) // Transfer already completed
+        return server->fileTransfers.erase(fd), 0;
     
     // const size_t CHUNK_SIZE = 8192; // 8KB chunks
     char buffer[CHUNK_SIZE];
@@ -242,14 +221,14 @@ int continueFileTransfer(int fd)
     if (!readFileChunk(state.filePath, buffer, state.offset, bytesToRead, bytesRead))
     {
         std::cerr << "Failed to read chunk from file: " << state.filePath << std::endl;
-        fileTransfers.erase(fd);
+        server->fileTransfers.erase(fd);
         return -1;
     }
     
     if (!sendChunk(fd, buffer, bytesRead))
     {
         std::cerr << "Failed to send chunk." << std::endl;
-        fileTransfers.erase(fd);
+        server->fileTransfers.erase(fd);
         return -1;
     }
     
@@ -261,12 +240,12 @@ int continueFileTransfer(int fd)
         if (!sendFinalChunk(fd))
         {
             std::cerr << "Failed to send final chunk." << std::endl;
-            fileTransfers.erase(fd);
+            server->fileTransfers.erase(fd);
             return -1;
         }
         
         state.isComplete = true;
-        fileTransfers.erase(fd);
+        server->fileTransfers.erase(fd);
     }
     
     return 0;
@@ -279,10 +258,7 @@ int handleFileRequest(int fd, Server *server, const std::string &filePath)
     size_t fileSize = getFileSize(filePath);
     
     if (fileSize == 0)
-    {
-        std::cerr << "Failed to get file size or empty file: " << filePath << std::endl;
-        return -1;
-    }
+        return std::cerr << "Failed to get file size or empty file: " << filePath << std::endl, -1;
     
     // Determine if file is large enough to warrant chunked encoding
     const size_t LARGE_FILE_THRESHOLD = 1024 * 1024; // 1MB
@@ -292,10 +268,7 @@ int handleFileRequest(int fd, Server *server, const std::string &filePath)
         // Use chunked encoding for large files
         std::string httpResponse = createChunkedHttpResponse(contentType);
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
-        {
-            std::cerr << "Failed to send chunked HTTP header." << std::endl;
-            return -1;
-        }
+            return std::cerr << "Failed to send chunked HTTP header." << std::endl, -1;
         
         // Setup the transfer state
         FileTransferState state;
@@ -303,39 +276,28 @@ int handleFileRequest(int fd, Server *server, const std::string &filePath)
         state.fileSize = fileSize;
         state.offset = 0;
         state.isComplete = false;
-        fileTransfers[fd] = state;
-        
+        server->fileTransfers[fd] = state;
         // Start sending the first chunk
-        return continueFileTransfer(fd);
+        return continueFileTransfer(fd, server);
     }
     else
     {
         // Use standard Content-Length for smaller files
         std::string httpResponse = createHttpResponse(contentType, fileSize);
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
-        {
-            std::cerr << "Failed to send HTTP header." << std::endl;
-            return -1;
-        }
+            return std::cerr << "Failed to send HTTP header." << std::endl, -1;
         
         // Read and send the entire file at once
         char* buffer = new char[fileSize];
         size_t bytesRead = 0;
         if (!readFileChunk(filePath, buffer, 0, fileSize, bytesRead))
-        {
-            std::cerr << "Failed to read file: " << filePath << std::endl;
-            delete[] buffer;
-            return -1;
-        }
+            return std::cerr << "Failed to read file: " << filePath << std::endl, delete[] buffer, -1;
         
         int result = send(fd, buffer, bytesRead, MSG_NOSIGNAL);
         delete[] buffer;
         
         if (result == -1)
-        {
-            std::cerr << "Failed to send file content." << std::endl;
-            return -1;
-        }
+            return std::cerr << "Failed to send file content." << std::endl, -1;
         
         return 0;
     }
@@ -351,10 +313,7 @@ std::string readFile(const std::string &path)
 
     std::ifstream infile(path.c_str(), std::ios::binary);
     if (!infile)
-    {
-        std::cerr << "Failed to open file: " << path << std::endl;
-        return "";
-    }
+        return std::cerr << "Failed to open file: " << path << std::endl, "";
 
     std::ostringstream oss;
     oss << infile.rdbuf();
@@ -367,10 +326,10 @@ int do_use_fd(int fd, Server *server, std::string request)
         return -1;
     
     // Check if we already have a file transfer in progress
-    if (fileTransfers.find(fd) != fileTransfers.end())
+    if (server->fileTransfers.find(fd) != server->fileTransfers.end())
     {
         // Continue the existing transfer
-        return continueFileTransfer(fd);
+        return continueFileTransfer(fd, server);
     }
     
     std::string filePath = parseRequest(request);
@@ -388,21 +347,13 @@ int do_use_fd(int fd, Server *server, std::string request)
         std::string httpResponse = errorPageNotFound(server->getContentType(new_path));
         
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
-        {
-            std::cerr << "Failed to send error response header" << std::endl;
-            return -1;
-        }
+            return std::cerr << "Failed to send error response header" << std::endl, -1;
         
         if (send(fd, content.c_str(), content.length(), MSG_NOSIGNAL) == -1)
-        {
-            std::cerr << "Failed to send error content" << std::endl;
-            return -1;
-        }
-        
+            return std::cerr << "Failed to send error content" << std::endl, -1;        
         return 0;
     }
 }
-
 
 
 int Server::establishingServer(Server *server)
@@ -457,10 +408,7 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
     int nfds;
 
     if ((nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1)) == -1)
-    {
-        std::cerr << "epoll_wait" << std::endl;
-        return EXIT_FAILURE;
-    }
+        return std::cerr << "epoll_wait" << std::endl, EXIT_FAILURE;
     
     for (int i = 0; i < nfds; ++i)
     {
@@ -468,35 +416,24 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
         {
             conn_sock = accept(listen_sock, (struct sockaddr *)&clientAddress, &clientLen);
             if (conn_sock == -1)
-            {
-                std::cerr << "accept" << std::endl;
-                return EXIT_FAILURE;
-            }
+                return std::cerr << "accept" << std::endl, EXIT_FAILURE;
             setnonblocking(conn_sock);
             ev.events = EPOLLIN | EPOLLOUT;
             ev.data.fd = conn_sock;
             if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &ev) == -1)
-            {
-                std::cerr << "epoll_ctl: conn_sock" << std::endl;
-                return EXIT_FAILURE;
-            }
+                return std::cerr << "epoll_ctl: conn_sock" << std::endl, EXIT_FAILURE;
         }
         else if (events[i].events & EPOLLIN)
         {
             std::cout << "EPOLLIN" << std::endl;
             int bytes = recv(events[i].data.fd, buffer, sizeof(buffer), 0);
             if (bytes == -1)
-            {
-                std::cerr << "recv" << std::endl;
-                return EXIT_FAILURE;
-            }
+                return std::cerr << "recv" << std::endl, EXIT_FAILURE;
             else if (bytes == 0)
             {
                 // Clean up file transfer state if client disconnects
-                if (fileTransfers.find(events[i].data.fd) != fileTransfers.end())
-                {
-                    fileTransfers.erase(events[i].data.fd);
-                }
+                if (server->fileTransfers.find(events[i].data.fd) != server->fileTransfers.end())
+                    server->fileTransfers.erase(events[i].data.fd);
                 close(events[i].data.fd);
                 continue; 
             }
@@ -509,14 +446,12 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
         }
         else if (events[i].events & EPOLLOUT)
         {
+            std::cout << "EPOLLOUT" << std::endl;
             // Check if we have an ongoing file transfer
-            if (fileTransfers.find(events[i].data.fd) != fileTransfers.end())
+            if (server->fileTransfers.find(events[i].data.fd) != server->fileTransfers.end())
             {
-                if (continueFileTransfer(events[i].data.fd) == -1)
-                {
-                    std::cerr << "Failed to continue file transfer" << std::endl;
-                    return EXIT_FAILURE;
-                }
+                if (continueFileTransfer(events[i].data.fd, server) == -1)
+                    return std::cerr << "Failed to continue file transfer" << std::endl, EXIT_FAILURE;
                 continue;
             }
             
@@ -540,9 +475,7 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
             else if (request.find("GET") != std::string::npos) 
             {
                 if (do_use_fd(events[i].data.fd, server, request) == -1)
-                {
                     return EXIT_FAILURE;
-                }
             }
             else 
             {
@@ -552,7 +485,7 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
             }
             
             // Clear the buffer after processing to avoid reprocessing
-            if (fileTransfers.find(events[i].data.fd) == fileTransfers.end())
+            if (server->fileTransfers.find(events[i].data.fd) == server->fileTransfers.end())
             {
                 // Only erase if we're not in the middle of a chunked transfer
                 send_buffers.erase(events[i].data.fd);
@@ -608,11 +541,11 @@ int main()
     }
 
     // Clean up any remaining file transfers
-    for (std::map<int, FileTransferState>::iterator it = fileTransfers.begin(); it != fileTransfers.end(); ++it)
+    for (std::map<int, FileTransferState>::iterator it = server->fileTransfers.begin(); it != server->fileTransfers.end(); ++it)
     {
         close(it->first);
     }
-    fileTransfers.clear();
+    server->fileTransfers.clear();
 
     close(listen_sock);
     if (close(epollfd) == -1)

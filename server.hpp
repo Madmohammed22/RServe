@@ -40,7 +40,17 @@
 #define MAX_EVENTS 10 
 #define CHUNK_SIZE 8192 
 #define PATHC "/workspaces/Dwebserve/root/content/static/"
-#define PATHE "/workspaces/Dwebserve/root/content/error/" 
+#define PATHE "/workspaces/Dwebserve/root/error/" 
+
+// Structure to hold file transfer state
+struct FileTransferState {
+    std::string filePath;
+    size_t offset;
+    size_t fileSize;
+    bool isComplete;
+    
+    FileTransferState() : offset(0), fileSize(0), isComplete(false) {}
+};
 
 class Server
 {
@@ -49,7 +59,9 @@ public:
     Server(const Server& Init);
     Server& operator=(const Server& Init);
     ~Server();
-
+public:
+    // Map to keep track of file transfers for each client
+    std::map<int, FileTransferState> fileTransfers;
 public:
     int establishingServer(Server *server);
 
