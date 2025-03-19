@@ -145,10 +145,7 @@ void setnonblocking(int fd)
 {
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1)
-    {
-        perror("fcntl");
-        exit(EXIT_FAILURE);
-    }
+        (perror("fcntl"), exit(EXIT_FAILURE));
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
     {
         perror("fcntl");
@@ -158,14 +155,10 @@ void setnonblocking(int fd)
 
 bool canBeOpen(std::string &filePath)
 {
-    std::string new_path;
-    new_path = PATHC + filePath;
+    std::string new_path = PATHC + filePath;
     std::ifstream file(new_path.c_str());
     if (!file.is_open())
-    {
-        std::cerr << "Failed to open file: " << new_path << std::endl;
-        return false;
-    }
+        return std::cerr << "Failed to open file: " << new_path << std::endl, false;
     filePath = new_path;
     return true;
 }
@@ -339,7 +332,6 @@ int do_use_fd(int fd, Server *server, std::string request)
     }
     else
     {
-        // Send 404 error page
         std::string path1 = PATHE;
         std::string path2 = "index.html";
         std::string new_path = path1 + path2;
@@ -356,16 +348,12 @@ int do_use_fd(int fd, Server *server, std::string request)
 }
 
 
-int Server::establishingServer(Server *server)
+int Server::establishingServer()
 {
-    (void)server;
     int serverSocket = 0;
     serverSocket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, getprotobyname("tcp")->p_proto);
     if (serverSocket < 0)
-    {
-        std::cerr << "Error opening stream socket." << std::endl;
-        return EXIT_FAILURE;
-    }
+        return std::cerr << "Error opening stream socket." << std::endl, EXIT_FAILURE;
 
     sockaddr_in serverAddress;
     serverAddress.sin_family = AF_INET;
@@ -374,28 +362,16 @@ int Server::establishingServer(Server *server)
     int len = sizeof(serverAddress);
     int a = 1;
     if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEPORT, &a, sizeof(int)) < 0)
-    {
-        perror("setsockopt failed");
-        return EXIT_FAILURE;
-    }
+        return perror("setsockopt failed"), EXIT_FAILURE;
     if (bind(serverSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) == -1)
-    {
-        perror("binding stream socket");
-        return EXIT_FAILURE;
-    }
+        return perror("binding stream socket"), EXIT_FAILURE;
 
     if (getsockname(serverSocket, (struct sockaddr *)&serverAddress, (socklen_t *)&len) == -1)
-    {
-        perror("getting socket name");
-        return EXIT_FAILURE;
-    }
+        return perror("getting socket name"), EXIT_FAILURE;
     std::cout << "Socket port " << ntohs(serverAddress.sin_port) << std::endl;
 
     if (listen(serverSocket, 5) < 0)
-    {
-        perror("listen stream socket");
-        return EXIT_FAILURE;
-    }
+        return perror("listen stream socket"), EXIT_FAILURE;
     return serverSocket;
 }
 
@@ -503,7 +479,7 @@ int main()
     int listen_sock, epollfd;
     struct epoll_event ev;
 
-    listen_sock = server->establishingServer(server);
+    listen_sock = server->establishingServer();
     if (listen_sock == EXIT_FAILURE)
     {
         delete server;

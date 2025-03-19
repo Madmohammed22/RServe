@@ -63,7 +63,7 @@ public:
     // Map to keep track of file transfers for each client
     std::map<int, FileTransferState> fileTransfers;
 public:
-    int establishingServer(Server *server);
+    int establishingServer();
 
 public:
     std::string parsRequest(std::string request);
