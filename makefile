@@ -1,9 +1,8 @@
 SRC = server.cpp
-# SRC = main.cpp Reader.cpp
 OBJ = $(SRC:.cpp=.o)
 NAME = webserver
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror  -g3  -std=c++98 -fsanitize=address
+CXXFLAGS = -Wall -Wextra -Werror  -g3 -std=c++98 #-fsanitize=address
 
 all: $(NAME)
 

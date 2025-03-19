@@ -425,7 +425,6 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
         }
         else if (events[i].events & EPOLLIN)
         {
-            std::cout << "EPOLLIN" << std::endl;
             int bytes = recv(events[i].data.fd, buffer, sizeof(buffer), 0);
             if (bytes == -1)
                 return std::cerr << "recv" << std::endl, EXIT_FAILURE;
@@ -446,7 +445,6 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
         }
         else if (events[i].events & EPOLLOUT)
         {
-            std::cout << "EPOLLOUT" << std::endl;
             // Check if we have an ongoing file transfer
             if (server->fileTransfers.find(events[i].data.fd) != server->fileTransfers.end())
             {
