@@ -479,31 +479,22 @@ int main()
     int listen_sock, epollfd;
     struct epoll_event ev;
 
-    listen_sock = server->establishingServer();
-    if (listen_sock == EXIT_FAILURE)
-    {
-        delete server;
-        return EXIT_FAILURE;
-    }
+    if ((listen_sock = server->establishingServer()) == EXIT_FAILURE)
+        return delete server, EXIT_FAILURE;
     
     std::cout << "Server is listening" << std::endl;
     if ((epollfd = epoll_create1(0)) == -1)
     {
-        std::cout << "Failed to create epoll file descriptor" << std::endl;
-        close(listen_sock);
-        delete server;
-        return EXIT_FAILURE;
+        return std::cout << "Failed to create epoll file descriptor" << std::endl,
+        close(listen_sock), delete server, EXIT_FAILURE;
     }
     
     ev.events = EPOLLIN | EPOLLET;
     ev.data.fd = listen_sock;
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, listen_sock, &ev) == -1)
     {
-        std::cerr << "Failed to add file descriptor to epoll" << std::endl;
-        close(listen_sock);
-        close(epollfd);
-        delete server;
-        return EXIT_FAILURE;
+        return std::cerr << "Failed to add file descriptor to epoll" << std::endl,
+        close(listen_sock), close(epollfd), delete server, EXIT_FAILURE;
     }
 
     std::map<int, std::string> send_buffers;
@@ -523,11 +514,7 @@ int main()
 
     close(listen_sock);
     if (close(epollfd) == -1)
-    {
-        std::cerr << "Failed to close epoll file descriptor" << std::endl;
-        delete server;
-        return EXIT_FAILURE;
-    }
+        return std::cerr << "Failed to close epoll file descriptor" << std::endl, delete server, EXIT_FAILURE;
     
     delete server;
     return EXIT_SUCCESS;
