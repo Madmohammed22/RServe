@@ -412,7 +412,7 @@ int DELETE(std::string request){
     }
     return EXIT_SUCCESS;
 }
-int do_use_fd_delete(int fd, Server *server,std::string request){    
+int handle_delete_request(int fd, Server *server,std::string request){    
     std::cout << request << std::endl;
     std::string filePath = parseRequest(request);
     if (canBeOpen(filePath)){
@@ -444,7 +444,7 @@ int do_use_fd_delete(int fd, Server *server,std::string request){
     }
     return 0;
 }
-int do_use_fd(int fd, Server *server, std::string request)
+int serve_file_request(int fd, Server *server, std::string request)
 {
     if (request.empty())
         return -1;
@@ -503,7 +503,7 @@ int Server::establishingServer()
         return perror("listen stream socket"), EXIT_FAILURE;
     return serverSocket;
 }
-int methodNotAllowed(int fd, Server *server,std::string request){
+int processMethodNotAllowed(int fd, Server *server,std::string request){
     (void)request;
     std::string path1 = PATHE;
     std::string path2 = "405.html";
@@ -587,18 +587,18 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
             }
             else if (request.find("DELETE") != std::string::npos)
             {
-                if (do_use_fd_delete(events[i].data.fd, server, request) == -1)
+                if (handle_delete_request(events[i].data.fd, server, request) == -1)
                     return EXIT_FAILURE;
             }
             else if (request.find("GET") != std::string::npos) 
             {
-                if (do_use_fd(events[i].data.fd, server, request) == -1)
+                if (serve_file_request(events[i].data.fd, server, request) == -1)
                     return EXIT_FAILURE;
             }
             else 
             {
 
-                if (methodNotAllowed(events[i].data.fd, server, request) == -1)
+                if (processMethodNotAllowed(events[i].data.fd, server, request) == -1)
                     return EXIT_FAILURE;
             }
             
