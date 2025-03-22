@@ -24,6 +24,9 @@
 #include <arpa/inet.h>
 #include <netdb.h>  // Added for getprotobyname
 #include <iomanip>  // Added for std::hex, std::setw, std::setfill
+#include <sys/stat.h>  // Added for stat function
+#include <filesystem>
+#include <dirent.h>     // Added for directory operations
 
 Server::Server()
 {
@@ -100,8 +103,25 @@ bool readFileChunk(const std::string &path, char *buffer, size_t offset, size_t 
     return true;
 }
 
+int getFileType(std::string path){
+    struct stat s;
+    if( stat(path.c_str(), &s) == 0 )
+    {
+        if( s.st_mode & S_IFDIR )
+            return 1;
+        else if( s.st_mode & S_IFREG )
+            return 2;
+        else
+            return 3;
+    }
+    return -1;
+}
 std::string parseRequest(std::string request)
 {
+    std::cout << "------------------------------------\n";
+    std::cout <<request << std::endl;
+    std::cout << "------------------------------------\n";
+
     if (request.empty())
         return "";
     std::string filePath = "/index.html";
@@ -109,6 +129,23 @@ std::string parseRequest(std::string request)
     if (startPos != std::string::npos)
     {
         startPos += 5;
+        size_t endPos = request.find(" HTTP/", startPos);
+        if (endPos != std::string::npos)
+        {
+            std::string requestedPath = request.substr(startPos, endPos - startPos);
+            if (requestedPath.empty()){
+                return filePath;
+            }
+            if (!requestedPath.empty() && requestedPath != "/")
+            {
+                filePath = requestedPath;
+            }
+        }
+    }
+    else{
+        filePath.clear();
+        size_t startPos = request.find("DELETE /");
+        startPos += 8;
         size_t endPos = request.find(" HTTP/", startPos);
         if (endPos != std::string::npos)
         {
@@ -154,8 +191,15 @@ void setnonblocking(int fd)
 }
 
 bool canBeOpen(std::string &filePath)
-{
-    std::string new_path = PATHC + filePath;
+{  
+    std::string new_path;
+    if (getFileType("/" + filePath) == 2)
+        new_path = "/" + filePath;
+    else if (getFileType("/" + filePath) == 1){
+        new_path = "/" + filePath;
+    }
+    else
+        new_path = PATHC + filePath;
     std::ifstream file(new_path.c_str());
     if (!file.is_open())
         return std::cerr << "Failed to open file: " << new_path << std::endl, false;
@@ -296,7 +340,51 @@ int handleFileRequest(int fd, Server *server, const std::string &filePath)
     }
 }
 
+void deleteDirectoryContents(const std::string& dir)
+{
+    DIR* dp = opendir(dir.c_str());
+    if (dp == NULL) {
+        std::cerr << "Error: Unable to open directory " << dir << std::endl;
+        return;
+    }
 
+    try
+    {
+        struct dirent* entry;
+        while ((entry = readdir(dp)) != NULL) {
+            // Skip the special entries "." and ".."
+            if (std::string(entry->d_name) == "." || std::string(entry->d_name) == "..") {
+                continue;
+            }
+
+            struct stat entryStat;
+            std::string entryPath = dir + "/" + entry->d_name;
+            if (stat(entryPath.c_str(), &entryStat) == -1) {
+                std::cerr << "Error: Unable to stat " << entryPath << std::endl;
+                continue;
+            }
+
+            if (S_ISDIR(entryStat.st_mode)) {
+                // If it's a directory, use recursive removal
+                if (rmdir(entryPath.c_str()) == -1) {
+                    std::cerr << "Error: Unable to remove directory " << entryPath << std::endl;
+                }
+            } else {
+                // If it's a file, remove it
+                if (unlink(entryPath.c_str()) == -1) {
+                    std::cerr << "Error: Unable to remove file " << entryPath << std::endl;
+                }
+            }
+        }
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
+
+    closedir(dp);
+    (void)rmdir(dir.c_str());
+}
 
 // Original readFile function - kept for error pages
 std::string readFile(const std::string &path)
@@ -312,12 +400,49 @@ std::string readFile(const std::string &path)
     oss << infile.rdbuf();
     return oss.str();
 }
-
+int DELETE(std::string request){
+    const char* filename = request.c_str();
+    if (unlink(filename) == -1) {
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+int do_use_fd_delete(int fd, Server *server,std::string request){
+    std::cout << request << std::endl;
+    std::string filePath = parseRequest(request);
+    if (canBeOpen(filePath)){
+        std::cout << filePath << std::endl;
+        std::cout << getFileType(filePath) << std::endl;
+        if (getFileType(filePath) == 1){
+            deleteDirectoryContents(filePath.c_str());
+        }
+        if (DELETE(filePath) == -1)
+            return -1;
+        std::string contentType = server->getContentType(filePath);
+        std::string httpResponse = createHttpResponse(contentType, filePath.size());
+        if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
+            return std::cerr << "Failed to send HTTP header." << std::endl, -1;
+    }
+    else{
+        std::string path1 = PATHE;
+        std::string path2 = "index.html";
+        std::string new_path = path1 + path2;
+        std::string content = readFile(new_path);
+        std::string httpResponse = errorPageNotFound(server->getContentType(new_path));
+        if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
+            return std::cerr << "Failed to send error response header" << std::endl, -1;
+        
+        if (send(fd, content.c_str(), content.length(), MSG_NOSIGNAL) == -1)
+            return std::cerr << "Failed to send error content" << std::endl, -1;
+        std::cout << "This file is not exist\n";
+        return 0;        
+    }
+    return 0;
+}
 int do_use_fd(int fd, Server *server, std::string request)
 {
     if (request.empty())
         return -1;
-    
     // Check if we already have a file transfer in progress
     if (server->fileTransfers.find(fd) != server->fileTransfers.end())
     {
@@ -347,7 +472,6 @@ int do_use_fd(int fd, Server *server, std::string request)
     }
 }
 
-
 int Server::establishingServer()
 {
     int serverSocket = 0;
@@ -375,7 +499,8 @@ int Server::establishingServer()
     return serverSocket;
 }
 
-int handleClientConnections(Server *server, int listen_sock, struct epoll_event &ev, sockaddr_in &clientAddress, int epollfd, socklen_t &clientLen, std::map<int, std::string> &send_buffers)
+int handleClientConnections(Server *server, int listen_sock, struct epoll_event &ev
+    , sockaddr_in &clientAddress, int epollfd, socklen_t &clientLen, std::map<int, std::string> &send_buffers)
 {
     int conn_sock;
     char buffer[CHUNK_SIZE];
@@ -417,6 +542,7 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
                 buffer[bytes] = '\0';
                 request = buffer;
                 send_buffers[events[i].data.fd] = request;
+                // std::cout << "-->|" << request << std::endl;
             }
         }
         else if (events[i].events & EPOLLOUT)
@@ -442,9 +568,8 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
             }
             else if (request.find("DELETE") != std::string::npos)
             {
-                // Handle DELETE requests
-                // std::string body = request.substr(request.find("\r\n\r\n") + 4);
-                // send_buffers[events[i].data.fd] = body;
+                if (do_use_fd_delete(events[i].data.fd, server, request) == -1)
+                    return EXIT_FAILURE;
             }
             else if (request.find("GET") != std::string::npos) 
             {

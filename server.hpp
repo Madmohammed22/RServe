@@ -39,8 +39,10 @@
 #define PORT 8080 
 #define MAX_EVENTS 10 
 #define CHUNK_SIZE 8192 
-#define PATHC "/workspaces/Dwebserve/root/content/static/"
-#define PATHE "/workspaces/Dwebserve/root/error/" 
+// /home/mmad/Desktop/webserve/root/content/testing
+#define PATHC "/home/mmad/Desktop/webserve/root/content/static/"
+// #define PATHC "/home/mmad/Desktop/webserve/root/content/testing/"
+#define PATHE "/home/mmad/Desktop/webserve/root/error/" 
 
 // Structure to hold file transfer state
 struct FileTransferState {
