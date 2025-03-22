@@ -407,7 +407,7 @@ int DELETE(std::string request){
     }
     return EXIT_SUCCESS;
 }
-int do_use_fd_delete(int fd, Server *server,std::string request){
+int do_use_fd_delete(int fd, Server *server,std::string request){    
     std::cout << request << std::endl;
     std::string filePath = parseRequest(request);
     if (canBeOpen(filePath)){
@@ -451,7 +451,7 @@ int do_use_fd(int fd, Server *server, std::string request)
     }
     
     std::string filePath = parseRequest(request);
-    if (canBeOpen(filePath))
+    if (canBeOpen(filePath) && getFileType(filePath) == 2)
     {
         return handleFileRequest(fd, server, filePath);
     }
