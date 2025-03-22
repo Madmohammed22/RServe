@@ -41,7 +41,6 @@
 #define CHUNK_SIZE 8192 
 // /home/mmad/Desktop/webserve/root/content/testing
 #define PATHC "/home/mmad/Desktop/webserve/root/content/static/"
-// #define PATHC "/home/mmad/Desktop/webserve/root/content/testing/"
 #define PATHE "/home/mmad/Desktop/webserve/root/error/" 
 
 // Structure to hold file transfer state
@@ -71,6 +70,9 @@ public:
     std::string parsRequest(std::string request);
     std::string parsRequest404(std::string request);
     std::string getContentType(const std::string &path);
+
+public:
+    int pageNotFound;
 };
 
 class ConfigurationFile{

@@ -30,11 +30,12 @@
 
 Server::Server()
 {
+    this->pageNotFound = 0;
 }
 
 Server::Server(const Server &Init)
 {
-    (void)Init;
+    this->pageNotFound = Init.pageNotFound;
 }
 
 Server &Server::operator=(const Server &Init)
@@ -178,6 +179,10 @@ std::string errorPageNotFound(std::string contentType)
     return "HTTP/1.1 404 Not Found\r\nContent-Type: " + contentType + "\r\n\r\n";
 }
 
+std::string errorMethodNotAllowed(std::string contentType)
+{
+    return "HTTP/1.1 405 Method Not Allowed\r\nContent-Type: " + contentType + "\r\n\r\n";
+}
 void setnonblocking(int fd)
 {
     int flags = fcntl(fd, F_GETFL, 0);
@@ -202,7 +207,7 @@ bool canBeOpen(std::string &filePath)
         new_path = PATHC + filePath;
     std::ifstream file(new_path.c_str());
     if (!file.is_open())
-        return std::cerr << "Failed to open file: " << new_path << std::endl, false;
+        return std::cerr << "Failed to open file:: " << new_path << std::endl, false;
     filePath = new_path;
     return true;
 }
@@ -425,7 +430,7 @@ int do_use_fd_delete(int fd, Server *server,std::string request){
     }
     else{
         std::string path1 = PATHE;
-        std::string path2 = "index.html";
+        std::string path2 = "404.html";
         std::string new_path = path1 + path2;
         std::string content = readFile(new_path);
         std::string httpResponse = errorPageNotFound(server->getContentType(new_path));
@@ -458,7 +463,7 @@ int do_use_fd(int fd, Server *server, std::string request)
     else
     {
         std::string path1 = PATHE;
-        std::string path2 = "index.html";
+        std::string path2 = "404.html";
         std::string new_path = path1 + path2;
         std::string content = readFile(new_path);
         std::string httpResponse = errorPageNotFound(server->getContentType(new_path));
@@ -498,7 +503,21 @@ int Server::establishingServer()
         return perror("listen stream socket"), EXIT_FAILURE;
     return serverSocket;
 }
-
+int methodNotAllowed(int fd, Server *server,std::string request){
+    (void)request;
+    std::string path1 = PATHE;
+    std::string path2 = "405.html";
+    std::string new_path = path1 + path2;
+    std::string content = readFile(new_path);
+    std::string httpResponse = errorMethodNotAllowed(server->getContentType(new_path));
+    
+    if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
+        return std::cerr << "Failed to send error response header" << std::endl, -1;
+    
+    if (send(fd, content.c_str(), content.length(), MSG_NOSIGNAL) == -1)
+        return std::cerr << "Failed to send error content" << std::endl, -1;        
+    return 0;
+}
 int handleClientConnections(Server *server, int listen_sock, struct epoll_event &ev
     , sockaddr_in &clientAddress, int epollfd, socklen_t &clientLen, std::map<int, std::string> &send_buffers)
 {
@@ -578,9 +597,9 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
             }
             else 
             {
-                // Handle unknown request types
-                std::cerr << "Unknown request type" << std::endl;
-                continue;
+
+                if (methodNotAllowed(events[i].data.fd, server, request) == -1)
+                    return EXIT_FAILURE;
             }
             
             // Clear the buffer after processing to avoid reprocessing
