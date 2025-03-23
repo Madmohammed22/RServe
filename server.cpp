@@ -206,8 +206,10 @@ bool canBeOpen(std::string &filePath)
     else
         new_path = PATHC + filePath;
     std::ifstream file(new_path.c_str());
-    if (!file.is_open())
-        return std::cerr << "Failed to open file:: " << new_path << std::endl, false;
+    if (!file.is_open()){
+        // std::cout << getFileType(filePath) << std::endl;
+        return std::cerr << "Failed to open file: " << new_path << std::endl, false;
+    }
     filePath = new_path;
     return true;
 }
@@ -439,8 +441,11 @@ int handle_delete_request(int fd, Server *server,std::string request){
         
         if (send(fd, content.c_str(), content.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send error content" << std::endl, -1;
-        std::cout << "This file is not exist\n";
-        return 0;        
+        if (send(fd, "\r\n\r\n", 2, MSG_NOSIGNAL) == -1)
+            return -1;
+        server->fileTransfers.erase(fd);
+        std::cout << "File does not exist: " << filePath << std::endl;
+        return 0;
     }
     return 0;
 }
@@ -469,10 +474,13 @@ int serve_file_request(int fd, Server *server, std::string request)
         std::string httpResponse = errorPageNotFound(server->getContentType(new_path));
         
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
-            return std::cerr << "Failed to send error response header" << std::endl, -1;
-        
+            return std::cerr << "Failed to send error response header" << std::endl, close(fd), -1;
         if (send(fd, content.c_str(), content.length(), MSG_NOSIGNAL) == -1)
-            return std::cerr << "Failed to send error content" << std::endl, -1;        
+            return std::cerr << "Failed to send error content" << std::endl, close(fd), -1;
+        if (send(fd, "\r\n\r\n", 2, MSG_NOSIGNAL) == -1)
+            return close(fd), -1;
+        server->fileTransfers.erase(fd);
+        close(fd);
         return 0;
     }
 }
@@ -512,10 +520,14 @@ int processMethodNotAllowed(int fd, Server *server,std::string request){
     std::string httpResponse = errorMethodNotAllowed(server->getContentType(new_path));
     
     if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
-        return std::cerr << "Failed to send error response header" << std::endl, -1;
+        return std::cerr << "Failed to send error response header" << std::endl, close(fd), -1;
     
     if (send(fd, content.c_str(), content.length(), MSG_NOSIGNAL) == -1)
-        return std::cerr << "Failed to send error content" << std::endl, -1;        
+        return std::cerr << "Failed to send error content" << std::endl, close(fd), -1;
+    if (send(fd, "\r\n\r\n", 2, MSG_NOSIGNAL) == -1)
+        return close(fd), -1;
+    server->fileTransfers.erase(fd);
+    close(fd);        
     return 0;
 }
 int handleClientConnections(Server *server, int listen_sock, struct epoll_event &ev
@@ -561,7 +573,6 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
                 buffer[bytes] = '\0';
                 request = buffer;
                 send_buffers[events[i].data.fd] = request;
-                // std::cout << "-->|" << request << std::endl;
             }
         }
         else if (events[i].events & EPOLLOUT)
@@ -581,6 +592,7 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
 
             if (request.find("POST") != std::string::npos)
             {
+                std::cout << request << std::endl;
                 // Handle POST requests
                 // std::string body = request.substr(request.find("\r\n\r\n") + 4);
                 // send_buffers[events[i].data.fd] = body;
@@ -597,7 +609,6 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
             }
             else 
             {
-
                 if (processMethodNotAllowed(events[i].data.fd, server, request) == -1)
                     return EXIT_FAILURE;
             }
