@@ -108,9 +108,9 @@ int getFileType(std::string path){
     struct stat s;
     if( stat(path.c_str(), &s) == 0 )
     {
-        if( s.st_mode & S_IFDIR )
+        if( s.st_mode & S_IFDIR ) // dir
             return 1;
-        else if( s.st_mode & S_IFREG )
+        else if( s.st_mode & S_IFREG ) // file
             return 2;
         else
             return 3;
@@ -160,16 +160,38 @@ std::string parseRequest(std::string request)
     return filePath;
 }
 
+std::string getCurrentTimeInGMT(){
+    
+    time_t t = time(0);
+    tm *const time_struct = localtime(&t);
+
+    time_struct->tm_year = time_struct->tm_year; 
+    time_struct->tm_mon = time_struct->tm_mon;           
+    time_struct->tm_mday = time_struct->tm_mday;          
+    time_struct->tm_hour = time_struct->tm_hour;     
+    time_struct->tm_min = time_struct->tm_min;      
+    time_struct->tm_sec = time_struct->tm_sec;      
+    time_struct->tm_isdst = -1;
+
+    time_t time_value = mktime(time_struct);
+
+    char buffer[100];
+    strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&time_value));
+    std::string date = buffer;
+    return date;
+}
+
 std::string createChunkedHttpResponse(std::string contentType)
 {
-    return "HTTP/1.1 200 OK\r\nContent-Type: " + contentType + "\r\nTransfer-Encoding: chunked\r\n\r\n";
+    return "HTTP/1.1 200 OK\r\nContent-Type: " + contentType + "; charset=utf-8" + "\r\nTransfer-Encoding: chunked\r\n\r\n";
 }
 
 std::string createHttpResponse(std::string contentType, size_t contentLength)
 {
     std::ostringstream oss;
     oss << "HTTP/1.1 200 OK\r\n"
-        << "Content-Type: " << contentType << "\r\n"
+        << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n"
+        << "Last-Modified: " << getCurrentTimeInGMT() << "\r\n"
         << "Content-Length: " << contentLength << "\r\n\r\n";
     return oss.str();
 }
@@ -213,7 +235,6 @@ bool canBeOpen(std::string &filePath)
     filePath = new_path;
     return true;
 }
-
 
 // Send a chunk of data using chunked encoding
 bool sendChunk(int fd, const char* data, size_t size)
@@ -311,6 +332,7 @@ int handleFileRequest(int fd, Server *server, const std::string &filePath)
     {
         // Use chunked encoding for large files
         std::string httpResponse = createChunkedHttpResponse(contentType);
+        std::cout << "[1][" << httpResponse << "]" << std::endl;
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send chunked HTTP header." << std::endl, -1;
         
@@ -328,6 +350,7 @@ int handleFileRequest(int fd, Server *server, const std::string &filePath)
     {
         // Use standard Content-Length for smaller files
         std::string httpResponse = createHttpResponse(contentType, fileSize);
+        std::cout << "[2][" << httpResponse << "]" << std::endl;
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send HTTP header." << std::endl, -1;
         
@@ -414,23 +437,51 @@ int DELETE(std::string request){
     }
     return EXIT_SUCCESS;
 }
+std::string getFileTypeDescription(std::string filePath){
+    if (getFileType(filePath) == 1)
+        return "Directory";
+    else if (getFileType(filePath) == 2)
+        return "File";
+    else
+        return "Content";
+    return NULL; // potencial error
+}
+
 int handle_delete_request(int fd, Server *server,std::string request){    
     std::cout << request << std::endl;
     std::string filePath = parseRequest(request);
-    if (canBeOpen(filePath)){
-        std::cout << filePath << std::endl;
-        std::cout << getFileType(filePath) << std::endl;
-        if (getFileType(filePath) == 1){
+    // just to get the result if the file can be open.
+    if (canBeOpen(filePath)) {
+        if (getFileType(filePath) == 1) {
             deleteDirectoryContents(filePath.c_str());
         }
-        if (DELETE(filePath) == -1)
-            return -1;
-        std::string contentType = server->getContentType(filePath);
-        std::string httpResponse = createHttpResponse(contentType, filePath.size());
-        if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
-            return std::cerr << "Failed to send HTTP header." << std::endl, -1;
-    }
-    else{
+        if (DELETE(filePath) == -1) {
+            std::cerr << "Failed to delete file or directory: " << filePath << std::endl;
+            return close(fd), -1;
+        }
+
+        std::string contentType = "text/html";
+        std::string message = "<html>\n"
+                              "  <body>\n"
+                              "    <h1>" + getFileTypeDescription(filePath) + " " + filePath + "\" deleted successfully.</h1>\n"
+                              "  </body>\n"
+                              "</html>";
+        std::string httpResponse = createHttpResponse(contentType, message.size());
+        if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1) {
+            std::cerr << "Failed to send HTTP header." << std::endl;
+            return close(fd), -1;
+        }
+        if (send(fd, message.c_str(), message.length(), MSG_NOSIGNAL) == -1) {
+            std::cerr << "Failed to send response message." << std::endl;
+            return close(fd), -1;
+        }
+        if (send(fd, "\r\n\r\n", 2, MSG_NOSIGNAL) == -1) {
+            std::cerr << "Failed to send final header." << std::endl;
+            return close(fd), -1;
+        }
+        server->fileTransfers.erase(fd);
+        close(fd);
+    } else {
         std::string path1 = PATHE;
         std::string path2 = "404.html";
         std::string new_path = path1 + path2;
@@ -444,8 +495,8 @@ int handle_delete_request(int fd, Server *server,std::string request){
         if (send(fd, "\r\n\r\n", 2, MSG_NOSIGNAL) == -1)
             return -1;
         server->fileTransfers.erase(fd);
+        close(fd);
         std::cout << "File does not exist: " << filePath << std::endl;
-        return 0;
     }
     return 0;
 }

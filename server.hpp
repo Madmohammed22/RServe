@@ -12,6 +12,8 @@
 
 #ifndef SERVER_HPP
 #define SERVER_HPP
+#include <time.h>
+#include <bits/types.h>
 
 #include <iostream>
 #include <cstring>
