@@ -198,15 +198,14 @@ std::string errorPageNotFound(std::string contentType, int contentLength)
 
 std::string errorMethodNotAllowed(std::string contentType, int contentLength)
 {
+    (void)contentType;
     std::ostringstream oss;
     oss << "HTTP/1.1 405 Method Not Allowed\r\n"
-        << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n"
-        << "Last-Modified: " << getCurrentTimeInGMT() << "\r\n"
-        << "Content-Length: " << contentLength << "\r\n\r\n";
+        << "Content-Length: " << contentLength << "\r\n"
+        << "Date: " << getCurrentTimeInGMT() << "\r\n\r\n";
+        // << "Allow: " << "GET, POST, DELETE" << "\r\n\r\n";
 
     return oss.str();
-
-    return "HTTP/1.1 405 Method Not Allowed\r\nContent-Type: " + contentType + "\r\n\r\n";
 }
 void setnonblocking(int fd)
 {
@@ -571,7 +570,7 @@ int processMethodNotAllowed(int fd, Server *server,std::string request){
     std::string path2 = "405.html";
     std::string new_path = path1 + path2;
     std::string content = readFile(new_path);
-    std::string httpResponse = errorMethodNotAllowed(server->getContentType(new_path));
+    std::string httpResponse = errorMethodNotAllowed(server->getContentType(new_path), 0);
     
     if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
         return std::cerr << "Failed to send error response header" << std::endl, close(fd), -1;
