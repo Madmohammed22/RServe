@@ -160,23 +160,12 @@ std::string parseRequest(std::string request)
     return filePath;
 }
 
-std::string getCurrentTimeInGMT(){
-    
+std::string getCurrentTimeInGMT() {
     time_t t = time(0);
-    tm *const time_struct = localtime(&t);
-
-    time_struct->tm_year = time_struct->tm_year; 
-    time_struct->tm_mon = time_struct->tm_mon;           
-    time_struct->tm_mday = time_struct->tm_mday;          
-    time_struct->tm_hour = time_struct->tm_hour;     
-    time_struct->tm_min = time_struct->tm_min;      
-    time_struct->tm_sec = time_struct->tm_sec;      
-    time_struct->tm_isdst = -1;
-
-    time_t time_value = mktime(time_struct);
+    tm *time_struct = gmtime(&t);
 
     char buffer[100];
-    strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&time_value));
+    strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", time_struct);
     std::string date = buffer;
     return date;
 }
@@ -196,13 +185,27 @@ std::string createHttpResponse(std::string contentType, size_t contentLength)
     return oss.str();
 }
 
-std::string errorPageNotFound(std::string contentType)
+std::string errorPageNotFound(std::string contentType, int contentLength)
 {
-    return "HTTP/1.1 404 Not Found\r\nContent-Type: " + contentType + "\r\n\r\n";
+    std::ostringstream oss;
+    oss << "HTTP/1.1 404 Not Found\r\n"
+        << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n"
+        << "Last-Modified: " << getCurrentTimeInGMT() << "\r\n"
+        << "Content-Length: " << contentLength << "\r\n\r\n";
+
+    return oss.str();
 }
 
-std::string errorMethodNotAllowed(std::string contentType)
+std::string errorMethodNotAllowed(std::string contentType, int contentLength)
 {
+    std::ostringstream oss;
+    oss << "HTTP/1.1 405 Method Not Allowed\r\n"
+        << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n"
+        << "Last-Modified: " << getCurrentTimeInGMT() << "\r\n"
+        << "Content-Length: " << contentLength << "\r\n\r\n";
+
+    return oss.str();
+
     return "HTTP/1.1 405 Method Not Allowed\r\nContent-Type: " + contentType + "\r\n\r\n";
 }
 void setnonblocking(int fd)
@@ -486,7 +489,7 @@ int handle_delete_request(int fd, Server *server,std::string request){
         std::string path2 = "404.html";
         std::string new_path = path1 + path2;
         std::string content = readFile(new_path);
-        std::string httpResponse = errorPageNotFound(server->getContentType(new_path));
+        std::string httpResponse = errorPageNotFound(server->getContentType(new_path), content.length());
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send error response header" << std::endl, -1;
         
@@ -522,7 +525,7 @@ int serve_file_request(int fd, Server *server, std::string request)
         std::string path2 = "404.html";
         std::string new_path = path1 + path2;
         std::string content = readFile(new_path);
-        std::string httpResponse = errorPageNotFound(server->getContentType(new_path));
+        std::string httpResponse = errorPageNotFound(server->getContentType(new_path), content.length());
         
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send error response header" << std::endl, close(fd), -1;
