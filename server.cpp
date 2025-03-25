@@ -81,7 +81,7 @@ std::string Server::getContentType(const std::string &path)
 }
 
 // Helper function to get file size
-std::ifstream::pos_type getFileSize(const std::string &path)
+std::ifstream::pos_type Server::getFileSize(const std::string &path)
 {
     std::ifstream file(path.c_str(), std::ios::binary | std::ios::ate);
     if (!file.is_open())
@@ -104,7 +104,7 @@ bool readFileChunk(const std::string &path, char *buffer, size_t offset, size_t 
     return true;
 }
 
-int getFileType(std::string path){
+int Server::getFileType(std::string path){
     struct stat s;
     if( stat(path.c_str(), &s) == 0 )
     {
@@ -117,8 +117,9 @@ int getFileType(std::string path){
     }
     return -1;
 }
-std::string parseRequest(std::string request)
+std::string Server::parseRequest(std::string request, Server *server)
 {
+    (void)server;
     std::cout << "------------------------------------\n";
     std::cout <<request << std::endl;
     std::cout << "------------------------------------\n";
@@ -129,6 +130,7 @@ std::string parseRequest(std::string request)
     size_t startPos = request.find("GET /");
     if (startPos != std::string::npos)
     {
+        std::cout << "1\n";
         startPos += 5;
         size_t endPos = request.find(" HTTP/", startPos);
         if (endPos != std::string::npos)
@@ -157,12 +159,14 @@ std::string parseRequest(std::string request)
             }
         }
     }
+    std::cout << "3\n";
+
     return filePath;
 }
 
 std::string getCurrentTimeInGMT() {
     time_t t = time(0);
-    tm *time_struct = gmtime(&t);
+    tm *time_struct = gmtime(&t); // Use gmtime to get UTC time
 
     char buffer[100];
     strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", time_struct);
@@ -170,12 +174,12 @@ std::string getCurrentTimeInGMT() {
     return date;
 }
 
-std::string createChunkedHttpResponse(std::string contentType)
+std::string Server::createChunkedHttpResponse(std::string contentType)
 {
     return "HTTP/1.1 200 OK\r\nContent-Type: " + contentType + "; charset=utf-8" + "\r\nTransfer-Encoding: chunked\r\n\r\n";
 }
 
-std::string createHttpResponse(std::string contentType, size_t contentLength)
+std::string Server::generateHttpResponse(std::string contentType, size_t contentLength)
 {
     std::ostringstream oss;
     oss << "HTTP/1.1 200 OK\r\n"
@@ -185,7 +189,7 @@ std::string createHttpResponse(std::string contentType, size_t contentLength)
     return oss.str();
 }
 
-std::string errorPageNotFound(std::string contentType, int contentLength)
+std::string Server::createNotFoundResponse(std::string contentType, int contentLength)
 {
     std::ostringstream oss;
     oss << "HTTP/1.1 404 Not Found\r\n"
@@ -196,15 +200,15 @@ std::string errorPageNotFound(std::string contentType, int contentLength)
     return oss.str();
 }
 
-std::string errorMethodNotAllowed(std::string contentType, int contentLength)
+std::string generateMethodNotAllowedResponse(std::string contentType, int contentLength)
 {
-    (void)contentType;
+    (void)contentLength;
     std::ostringstream oss;
     oss << "HTTP/1.1 405 Method Not Allowed\r\n"
-        << "Content-Length: " << contentLength << "\r\n"
-        << "Date: " << getCurrentTimeInGMT() << "\r\n\r\n";
-        // << "Allow: " << "GET, POST, DELETE" << "\r\n\r\n";
-
+        << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n"
+        << "Allow: GET, POST, DELETE\r\n\r\n";
+        
+    // << "Content-Length: " << contentLength << "\r\n"
     return oss.str();
 }
 void setnonblocking(int fd)
@@ -219,7 +223,7 @@ void setnonblocking(int fd)
     }
 }
 
-bool canBeOpen(std::string &filePath)
+bool Server::canBeOpen(std::string &filePath)
 {  
     std::string new_path;
     if (getFileType("/" + filePath) == 2)
@@ -322,7 +326,7 @@ int continueFileTransfer(int fd, Server * server)
 int handleFileRequest(int fd, Server *server, const std::string &filePath)
 {
     std::string contentType = server->getContentType(filePath);
-    size_t fileSize = getFileSize(filePath);
+    size_t fileSize = server->getFileSize(filePath);
     
     if (fileSize == 0)
         return std::cerr << "Failed to get file size or empty file: " << filePath << std::endl, -1;
@@ -333,7 +337,7 @@ int handleFileRequest(int fd, Server *server, const std::string &filePath)
     if (fileSize > LARGE_FILE_THRESHOLD)
     {
         // Use chunked encoding for large files
-        std::string httpResponse = createChunkedHttpResponse(contentType);
+        std::string httpResponse = server->createChunkedHttpResponse(contentType);
         std::cout << "[1][" << httpResponse << "]" << std::endl;
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send chunked HTTP header." << std::endl, -1;
@@ -351,7 +355,7 @@ int handleFileRequest(int fd, Server *server, const std::string &filePath)
     else
     {
         // Use standard Content-Length for smaller files
-        std::string httpResponse = createHttpResponse(contentType, fileSize);
+        std::string httpResponse = server->generateHttpResponse(contentType, fileSize);
         std::cout << "[2][" << httpResponse << "]" << std::endl;
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send HTTP header." << std::endl, -1;
@@ -419,7 +423,7 @@ void deleteDirectoryContents(const std::string& dir)
 }
 
 // Original readFile function - kept for error pages
-std::string readFile(const std::string &path)
+std::string Server::readFile(const std::string &path)
 {
     if (path.empty())
         return "";
@@ -439,22 +443,14 @@ int DELETE(std::string request){
     }
     return EXIT_SUCCESS;
 }
-std::string getFileTypeDescription(std::string filePath){
-    if (getFileType(filePath) == 1)
-        return "Directory";
-    else if (getFileType(filePath) == 2)
-        return "File";
-    else
-        return "Content";
-    return NULL; // potencial error
-}
+
 
 int handle_delete_request(int fd, Server *server,std::string request){    
     std::cout << request << std::endl;
-    std::string filePath = parseRequest(request);
+    std::string filePath = server->parseRequest(request, server);
     // just to get the result if the file can be open.
-    if (canBeOpen(filePath)) {
-        if (getFileType(filePath) == 1) {
+    if (server->canBeOpen(filePath)) {
+        if (server->getFileType(filePath) == 1) {
             deleteDirectoryContents(filePath.c_str());
         }
         if (DELETE(filePath) == -1) {
@@ -463,12 +459,8 @@ int handle_delete_request(int fd, Server *server,std::string request){
         }
 
         std::string contentType = "text/html";
-        std::string message = "<html>\n"
-                              "  <body>\n"
-                              "    <h1>" + getFileTypeDescription(filePath) + " " + filePath + "\" deleted successfully.</h1>\n"
-                              "  </body>\n"
-                              "</html>";
-        std::string httpResponse = createHttpResponse(contentType, message.size());
+        std::string message = server->createDeleteResponse(filePath);
+        std::string httpResponse = server->generateHttpResponse(contentType, message.size());
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1) {
             std::cerr << "Failed to send HTTP header." << std::endl;
             return close(fd), -1;
@@ -487,8 +479,8 @@ int handle_delete_request(int fd, Server *server,std::string request){
         std::string path1 = PATHE;
         std::string path2 = "404.html";
         std::string new_path = path1 + path2;
-        std::string content = readFile(new_path);
-        std::string httpResponse = errorPageNotFound(server->getContentType(new_path), content.length());
+        std::string content = server->readFile(new_path);
+        std::string httpResponse = server->createNotFoundResponse(server->getContentType(new_path), content.length());
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send error response header" << std::endl, -1;
         
@@ -513,8 +505,8 @@ int serve_file_request(int fd, Server *server, std::string request)
         return continueFileTransfer(fd, server);
     }
     
-    std::string filePath = parseRequest(request);
-    if (canBeOpen(filePath) && getFileType(filePath) == 2)
+    std::string filePath = server->parseRequest(request,server);
+    if (server->canBeOpen(filePath) && server->getFileType(filePath) == 2)
     {
         return handleFileRequest(fd, server, filePath);
     }
@@ -523,8 +515,8 @@ int serve_file_request(int fd, Server *server, std::string request)
         std::string path1 = PATHE;
         std::string path2 = "404.html";
         std::string new_path = path1 + path2;
-        std::string content = readFile(new_path);
-        std::string httpResponse = errorPageNotFound(server->getContentType(new_path), content.length());
+        std::string content = server->readFile(new_path);
+        std::string httpResponse = server->createNotFoundResponse(server->getContentType(new_path), content.length());
         
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send error response header" << std::endl, close(fd), -1;
@@ -534,8 +526,8 @@ int serve_file_request(int fd, Server *server, std::string request)
             return close(fd), -1;
         server->fileTransfers.erase(fd);
         close(fd);
-        return 0;
     }
+    return 0;
 }
 
 int Server::establishingServer()
@@ -569,8 +561,8 @@ int processMethodNotAllowed(int fd, Server *server,std::string request){
     std::string path1 = PATHE;
     std::string path2 = "405.html";
     std::string new_path = path1 + path2;
-    std::string content = readFile(new_path);
-    std::string httpResponse = errorMethodNotAllowed(server->getContentType(new_path), 0);
+    std::string content = server->readFile(new_path);
+    std::string httpResponse = generateMethodNotAllowedResponse(server->getContentType(new_path), 0);
     
     if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
         return std::cerr << "Failed to send error response header" << std::endl, close(fd), -1;
@@ -645,7 +637,9 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
 
             if (request.find("POST") != std::string::npos)
             {
-                std::cout << request << std::endl;
+                // std::cout << "--> " << request << std::endl;
+                if (server->handle_post_request(events[i].data.fd, server, request) == -1)
+                    return EXIT_FAILURE;
                 // Handle POST requests
                 // std::string body = request.substr(request.find("\r\n\r\n") + 4);
                 // send_buffers[events[i].data.fd] = body;

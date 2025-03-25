@@ -75,6 +75,20 @@ public:
 
 public:
     int pageNotFound;
+
+public:
+    std::string createDeleteResponse(std::string path);
+    int handle_post_request(int fd, Server *server, std::string request);
+    std::string readFile(const std::string &path);
+    std::string createNotFoundResponse(std::string contentType, int contentLength);
+    std::string parseRequest(std::string request, Server *server);
+    int getFileType(std::string path);
+    bool canBeOpen(std::string &filePath);
+    std::string createChunkedHttpResponse(std::string contentType);
+    std::ifstream::pos_type getFileSize(const std::string &path);
+    std::string generateHttpResponse(std::string contentType, size_t contentLength);
+
+
 };
 
 class ConfigurationFile{

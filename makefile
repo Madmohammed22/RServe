@@ -1,4 +1,4 @@
-SRC = server.cpp
+SRC = server.cpp generateResponse.cpp post.cpp
 OBJ = $(SRC:.cpp=.o)
 NAME = webserver
 CXX = c++
