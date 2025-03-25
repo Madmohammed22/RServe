@@ -39,8 +39,8 @@
 #include <string>
 
 #define PORT 8080 
-#define MAX_EVENTS 10 
-#define CHUNK_SIZE 8192 
+#define MAX_EVENTS 10
+#define CHUNK_SIZE 8192
 // /home/mmad/Desktop/webserve/root/content/testing
 #define PATHC "/home/mmad/Desktop/webserve/root/content/static/"
 #define PATHE "/home/mmad/Desktop/webserve/root/error/" 
@@ -49,6 +49,7 @@
 struct FileTransferState {
     std::string filePath;
     size_t offset;
+    size_t endOffset;
     size_t fileSize;
     bool isComplete;
     

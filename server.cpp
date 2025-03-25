@@ -22,11 +22,11 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <netdb.h>  // Added for getprotobyname
-#include <iomanip>  // Added for std::hex, std::setw, std::setfill
-#include <sys/stat.h>  // Added for stat function
+#include <netdb.h> 
+#include <iomanip>  
+#include <sys/stat.h> 
 #include <filesystem>
-#include <dirent.h>     // Added for directory operations
+#include <dirent.h>   
 
 Server::Server()
 {
@@ -121,33 +121,35 @@ std::string Server::parseRequest(std::string request, Server *server)
 {
     (void)server;
     std::cout << "------------------------------------\n";
-    std::cout <<request << std::endl;
+    std::cout << request << std::endl;
     std::cout << "------------------------------------\n";
 
     if (request.empty())
         return "";
+
     std::string filePath = "/index.html";
+
+    // Handle GET requests
     size_t startPos = request.find("GET /");
     if (startPos != std::string::npos)
     {
-        std::cout << "1\n";
         startPos += 5;
         size_t endPos = request.find(" HTTP/", startPos);
         if (endPos != std::string::npos)
         {
             std::string requestedPath = request.substr(startPos, endPos - startPos);
-            if (requestedPath.empty()){
-                return filePath;
-            }
             if (!requestedPath.empty() && requestedPath != "/")
             {
                 filePath = requestedPath;
             }
         }
+        return filePath;
     }
-    else{
-        filePath.clear();
-        size_t startPos = request.find("DELETE /");
+
+    // Handle DELETE requests
+    startPos = request.find("DELETE /");
+    if (startPos != std::string::npos)
+    {
         startPos += 8;
         size_t endPos = request.find(" HTTP/", startPos);
         if (endPos != std::string::npos)
@@ -158,8 +160,25 @@ std::string Server::parseRequest(std::string request, Server *server)
                 filePath = requestedPath;
             }
         }
+        return filePath;
     }
-    std::cout << "3\n";
+
+    // Handle POST requests
+    startPos = request.find("POST /");
+    if (startPos != std::string::npos)
+    {
+        startPos += 6;
+        size_t endPos = request.find(" HTTP/", startPos);
+        if (endPos != std::string::npos)
+        {
+            std::string requestedPath = request.substr(startPos, endPos - startPos);
+            if (!requestedPath.empty() && requestedPath != "/")
+            {
+                filePath = requestedPath;
+            }
+        }
+        return filePath;
+    }
 
     return filePath;
 }
@@ -224,7 +243,8 @@ void setnonblocking(int fd)
 }
 
 bool Server::canBeOpen(std::string &filePath)
-{  
+{ 
+    std::cout << "---> " << filePath << std::endl;
     std::string new_path;
     if (getFileType("/" + filePath) == 2)
         new_path = "/" + filePath;
@@ -250,8 +270,10 @@ bool sendChunk(int fd, const char* data, size_t size)
     chunkHeader << std::hex << size << "\r\n";
     std::string header = chunkHeader.str();
     
-    if (send(fd, header.c_str(), header.length(), MSG_NOSIGNAL) == -1)
+    if (send(fd, header.c_str(), header.length(), MSG_NOSIGNAL) == -1){
+        std::cout << "Video........\n";
         return false;
+    }
     
     // Send chunk data
     if (size > 0) {
@@ -298,9 +320,9 @@ int continueFileTransfer(int fd, Server * server)
     
     if (!sendChunk(fd, buffer, bytesRead))
     {
-        std::cerr << "Failed to send chunk." << std::endl;
-        server->fileTransfers.erase(fd);
-        return -1;
+        // std::cerr << "Failed to send chunk." << std::endl;
+        // server->fileTransfers.erase(fd);
+        // return -1;
     }
     
     state.offset += bytesRead;
@@ -338,7 +360,6 @@ int handleFileRequest(int fd, Server *server, const std::string &filePath)
     {
         // Use chunked encoding for large files
         std::string httpResponse = server->createChunkedHttpResponse(contentType);
-        std::cout << "[1][" << httpResponse << "]" << std::endl;
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send chunked HTTP header." << std::endl, -1;
         
@@ -356,7 +377,6 @@ int handleFileRequest(int fd, Server *server, const std::string &filePath)
     {
         // Use standard Content-Length for smaller files
         std::string httpResponse = server->generateHttpResponse(contentType, fileSize);
-        std::cout << "[2][" << httpResponse << "]" << std::endl;
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send HTTP header." << std::endl, -1;
         
@@ -448,7 +468,6 @@ int DELETE(std::string request){
 int handle_delete_request(int fd, Server *server,std::string request){    
     std::cout << request << std::endl;
     std::string filePath = server->parseRequest(request, server);
-    // just to get the result if the file can be open.
     if (server->canBeOpen(filePath)) {
         if (server->getFileType(filePath) == 1) {
             deleteDirectoryContents(filePath.c_str());
@@ -637,12 +656,8 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
 
             if (request.find("POST") != std::string::npos)
             {
-                // std::cout << "--> " << request << std::endl;
                 if (server->handle_post_request(events[i].data.fd, server, request) == -1)
                     return EXIT_FAILURE;
-                // Handle POST requests
-                // std::string body = request.substr(request.find("\r\n\r\n") + 4);
-                // send_buffers[events[i].data.fd] = body;
             }
             else if (request.find("DELETE") != std::string::npos)
             {
@@ -684,7 +699,7 @@ int main()
     if ((listen_sock = server->establishingServer()) == EXIT_FAILURE)
         return delete server, EXIT_FAILURE;
     
-    std::cout << "Server is listening" << std::endl;
+    std::cout << "Server is listening" << std::endl;    
     if ((epollfd = epoll_create1(0)) == -1)
     {
         return std::cout << "Failed to create epoll file descriptor" << std::endl,
