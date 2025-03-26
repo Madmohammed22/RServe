@@ -120,9 +120,9 @@ int Server::getFileType(std::string path){
 std::string Server::parseRequest(std::string request, Server *server)
 {
     (void)server;
-    std::cout << "------------------------------------\n";
+    std::cout << "-------REQUEST PARSED-------\n";
     std::cout << request << std::endl;
-    std::cout << "------------------------------------\n";
+    std::cout << "-------END OF REQUEST-------\n";
 
     if (request.empty())
         return "";
@@ -244,7 +244,6 @@ void setnonblocking(int fd)
 
 bool Server::canBeOpen(std::string &filePath)
 { 
-    std::cout << "---> " << filePath << std::endl;
     std::string new_path;
     if (getFileType("/" + filePath) == 2)
         new_path = "/" + filePath;
