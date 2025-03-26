@@ -1,7 +1,0 @@
-GET I should get the dir like /content/index.html search if the dir can be open and open file inside of it
-
-
-DELETE method each cases lile if I test localhost:8080/dir/content
-the point here I need to delete the dir but before deleting the dir I need to delete all files containes in 
-that dir and then delete the (dir)
-

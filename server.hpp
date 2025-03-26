@@ -38,13 +38,20 @@
 #include <fcntl.h>
 #include <string>
 
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <sys/stat.h>  // For mkdir()
+#include <unistd.h>    // For stat()
+#include <errno.h>     // For strerror()
+#include <string.h>    // For strerror()
 #define PORT 8080 
 #define MAX_EVENTS 10
 #define CHUNK_SIZE 8192
 // /home/mmad/Desktop/webserve/root/content/testing
-#define PATHC "/home/mmad/Desktop/webserve/root/content/static/"
-#define PATHE "/home/mmad/Desktop/webserve/root/error/" 
-
+#define PATHC "/workspaces/webserve/root/content/"
+#define PATHE "/workspaces/webserve/root/error/" 
+#define PATHU "/workspaces/webserve/root/UPLOAD"
 // Structure to hold file transfer state
 struct FileTransferState {
     std::string filePath;

@@ -16,10 +16,6 @@ bool readFileChunk_post(const std::string &path, char *buffer, size_t offset, si
     file.seekg(offset, std::ios::beg);
     file.read(buffer, chunkSize);
     bytesRead = file.gcount();
-    std::cout <<"--------------\n";
-    std::cout << strlen(buffer) << std::endl;
-    std::cout <<"--------------??\n";
-
     return true;
 }
 
@@ -123,16 +119,13 @@ int handleFileRequest_post(int fd, Server* server, const std::string& filePath)
             return -1;
         }
         
-        // Determine if file is large enough to warrant chunked encoding
         if (fileSize > LARGE_FILE_THRESHOLD) {
-            // Use chunked encoding for large files
             std::string httpResponse = server->createChunkedHttpResponse(contentType);
             if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1) {
                 std::cerr << "Failed to send chunked HTTP header." << std::endl;
                 return -1;
             }
             
-            // Setup the transfer state
             FileTransferState state;
             state.filePath = filePath;
             state.fileSize = fileSize;
@@ -140,11 +133,9 @@ int handleFileRequest_post(int fd, Server* server, const std::string& filePath)
             state.isComplete = false;
             server->fileTransfers[fd] = state;
             
-            // Start sending the first chunk
             return continueFileTransfer_post(fd, server);
         }
         else {
-            // Use standard Content-Length for smaller files
             std::string httpResponse = server->generateHttpResponse(contentType, fileSize);
             
             if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1) {
@@ -152,7 +143,6 @@ int handleFileRequest_post(int fd, Server* server, const std::string& filePath)
                 return -1;
             }
             
-            // Read and send the entire file at once with RAII
             std::vector<char> buffer(fileSize);
             size_t bytesRead = 0;
             
@@ -166,21 +156,36 @@ int handleFileRequest_post(int fd, Server* server, const std::string& filePath)
                 return -1;
             }
             
-            // Extract the filename from the original path
+            // Define the redirect path
+            const std::string REDIRECTPATH = PATHU;
+
+            // Ensure the directory exists
+            struct stat st;
+            if (stat(REDIRECTPATH.c_str(), &st) != 0) {  // Check if path exists
+                if (mkdir(REDIRECTPATH.c_str(), 0777) != 0) {  // Create directory
+                    std::cerr << "Failed to create directory: " << REDIRECTPATH
+                              << " (" << strerror(errno) << ")" << std::endl;
+                    return -1;
+                }
+            }
+
+            // Extract filename from the original path
             std::string filename = filePath.substr(filePath.find_last_of("/\\") + 1);
-            
-            // Save the file to local path
-            std::ofstream localFile(filename, std::ios::binary);
+
+            // Construct the full new path
+            std::string newFilePath = REDIRECTPATH + "/" + filename;
+
+            // Save the file to the redirected path
+            std::ofstream localFile(newFilePath.c_str(), std::ios::binary);
             if (!localFile) {
-                std::cerr << "Failed to create local file: " << filename << std::endl;
+                std::cerr << "Failed to create file in redirected path: " << newFilePath << std::endl;
                 return -1;
             }
             
             localFile.write(buffer.data(), bytesRead);
-
             localFile.close();
             
-            std::cout << "File saved locally: " << filename << std::endl;
+            std::cout << "File successfully saved to: " << newFilePath << std::endl;
             
             return 0;
         }

@@ -321,8 +321,8 @@ int continueFileTransfer(int fd, Server * server)
     if (!sendChunk(fd, buffer, bytesRead))
     {
         // std::cerr << "Failed to send chunk." << std::endl;
-        // server->fileTransfers.erase(fd);
-        // return -1;
+        server->fileTransfers.erase(fd);
+        return -1;
     }
     
     state.offset += bytesRead;

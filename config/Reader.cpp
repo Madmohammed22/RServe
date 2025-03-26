@@ -1,20 +1,49 @@
-#include "Reader.hpp"
+#include "server.hpp"
 
 ConfigurationFile::ConfigurationFile()
 {
-    // std::cout << "[Reader] constructor is called" << std::endl;
 }
 
-ConfigurationFile::ConfigurationFile(const ConfigurationFile& Init){
+ConfigurationFile::ConfigurationFile(const ConfigurationFile &Init)
+{
     (void)Init;
-    // std::cout << "[Reader] parametrize constructor is called" << std::endl;
 }
 
-ConfigurationFile& ConfigurationFile::operator=(const ConfigurationFile& Init){
+ConfigurationFile &ConfigurationFile::operator=(const ConfigurationFile &Init)
+{
     if (this == &Init)
         return *this;
+
+    return *this;
 }
+
 ConfigurationFile::~ConfigurationFile()
 {
-    // std::cout << "[Reader] distructor is called" << std::endl;
+}
+
+bool ConfigurationFile::TheBalancedParentheses(std::string file)
+{
+    std::ifstream fileName(file.c_str());
+    std::stack<char> s;
+    std::string line;
+    std::vector<std::string> chaine;
+    std::string buffer;
+    while (std::getline(fileName, line))
+    {
+        chaine.push_back(line);
+        for (size_t i = 0; i < line.size(); i++)
+            buffer.push_back(line.at(i));
+    }
+    for (size_t i = 0; i < buffer.size(); i++)
+    {
+        if (buffer.at(i) == '{')
+            s.push(buffer.at(i));
+        else if (buffer.at(i) == '}')
+        {
+            if (s.empty() == true)
+                return false;
+            s.pop();
+        }
+    }
+    return s.empty();
 }
