@@ -1,8 +1,5 @@
-#include "server.hpp"
+#include "../server.hpp"
 
-// Constants for file transfer
-// const size_t CHUNK_SIZE = 8192; // 8KB chunks
-const size_t LARGE_FILE_THRESHOLD = 1024 * 1024; // 1MB
 
 // Read file in chunks with error handling
 bool readFileChunk_post(const std::string &path, char *buffer, size_t offset, size_t chunkSize, size_t &bytesRead)
@@ -19,7 +16,7 @@ bool readFileChunk_post(const std::string &path, char *buffer, size_t offset, si
     return true;
 }
 
-// Send a chunk of data using chunked encoding with improved error handling
+// Send a chunk of data using chunked encoding.
 bool sendChunk_post(int fd, const char* data, size_t size)
 {
     try {
@@ -58,7 +55,6 @@ bool sendFinalChunk_post(int fd)
            send(fd, "\r\n", 2, MSG_NOSIGNAL) != -1;
 }
 
-// Enhanced file transfer continuation with more robust error handling
 int continueFileTransfer_post(int fd, Server* server)
 {
     std::map<int, FileTransferState>::iterator transferIt = server->fileTransfers.find(fd);
@@ -76,7 +72,6 @@ int continueFileTransfer_post(int fd, Server* server)
     char buffer[CHUNK_SIZE];
     size_t remainingBytes = state.fileSize - state.offset;
     size_t bytesToRead = std::min(remainingBytes, static_cast<size_t>(CHUNK_SIZE));
-    std::cout << "--> " << bytesToRead << std::endl;
     size_t bytesRead = 0;
     
     if (!readFileChunk_post(state.filePath, buffer, state.offset, bytesToRead, bytesRead)) {
@@ -119,7 +114,7 @@ int handleFileRequest_post(int fd, Server* server, const std::string& filePath)
             return -1;
         }
         
-        if (fileSize > LARGE_FILE_THRESHOLD) {
+        if (fileSize > server->LARGE_FILE_THRESHOLD) {
             std::string httpResponse = server->createChunkedHttpResponse(contentType);
             if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1) {
                 std::cerr << "Failed to send chunked HTTP header." << std::endl;

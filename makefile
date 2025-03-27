@@ -1,8 +1,20 @@
-SRC = server.cpp generateResponse.cpp post.cpp
+SRC_DIR1 = /home/mmad/Desktop/Rserve/helper
+
+SRC_DIR2 = /home/mmad/Desktop/Rserve/methods
+
+SRC = server.cpp $(SRC_DIR2)/get.cpp $(SRC_DIR2)/post.cpp $(SRC_DIR2)/delete.cpp \
+	$(SRC_DIR1)/generateResponse.cpp \
+	$(SRC_DIR1)/getContentType.cpp $(SRC_DIR1)/parseRequest.cpp \
+	$(SRC_DIR1)/establishingServer.cpp \
+	$(SRC_DIR1)/processMethodNotAllowed.cpp
+
 OBJ = $(SRC:.cpp=.o)
+
 NAME = webserver
+
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror  -g3 #-std=c++98 #-fsanitize=address
+
+CXXFLAGS = -Wall -Wextra -Werror  -g3 #-std=c++98
 
 all: $(NAME)
 

@@ -1,4 +1,4 @@
-#include "server.hpp"
+#include "../server.hpp"
 
  std::string Server::createDeleteResponse(std::string path){
     std::string message = "<!DOCTYPE html>\n"
@@ -48,4 +48,3 @@
     "</html>";
     return message;
 }
-

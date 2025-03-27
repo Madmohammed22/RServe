@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:18 by mmad              #+#    #+#             */
-/*   Updated: 2025/03/18 03:17:22 by mmad             ###   ########.fr       */
+/*   Updated: 2025/03/27 03:48:07 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,44 +14,41 @@
 #define SERVER_HPP
 #include <time.h>
 #include <bits/types.h>
-
-#include <iostream>
+#include "server.hpp"
+#include <unistd.h>
+#include <iomanip>  
+#include <filesystem>
+#include <dirent.h>   
 #include <cstring>
-#include <string>
-#include <fstream>
 #include <sstream>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <unistd.h>
 #include <cstdlib>
 #include <map>
-#include <vector>
-#include <fstream>
 #include <stack>
-#include <poll.h>
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <poll.h>
-#include <vector>
 #include <sys/epoll.h>
 #include <fcntl.h>
 #include <string>
-
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <sys/stat.h>  // For mkdir()
-#include <unistd.h>    // For stat()
-#include <errno.h>     // For strerror()
-#include <string.h>    // For strerror()
+#include <sys/stat.h>  
+#include <errno.h>     
+#include <string.h>
+
+
 #define PORT 8080 
-#define MAX_EVENTS 10
-#define CHUNK_SIZE 8192
-// /home/mmad/Desktop/webserve/root/content/testing
-#define PATHC "/workspaces/webserve/root/content/"
-#define PATHE "/workspaces/webserve/root/error/" 
+#define MAX_EVENTS 1024
+#define CHUNK_SIZE 1024
+
+#define PATHC "/home/mmad/Desktop/Rserve/root/content/"
+#define PATHE "/home/mmad/Desktop/Rserve/root/error/" 
 #define PATHU "/workspaces/webserve/root/UPLOAD"
+
 // Structure to hold file transfer state
 struct FileTransferState {
     std::string filePath;
@@ -83,6 +80,7 @@ public:
 
 public:
     int pageNotFound;
+    size_t LARGE_FILE_THRESHOLD;
 
 public:
     std::string createDeleteResponse(std::string path);
@@ -95,22 +93,13 @@ public:
     std::string createChunkedHttpResponse(std::string contentType);
     std::ifstream::pos_type getFileSize(const std::string &path);
     std::string generateHttpResponse(std::string contentType, size_t contentLength);
-
-
-};
-
-class ConfigurationFile{
-private :
-    std::vector<std::string> buffer;
-
-public:
-    ConfigurationFile();
-    ConfigurationFile(const ConfigurationFile& Init);
-    ConfigurationFile& operator=(const ConfigurationFile& Init);
-    ~ConfigurationFile();
-
-public:
-    bool TheBalancedParentheses(std::string file);
+    int handle_delete_request(int fd, Server *server,std::string request);
+    int continueFileTransfer(int fd, Server * server);
+    int handleFileRequest(int fd, Server *server, const std::string &filePath);
+    int serve_file_request(int fd, Server *server, std::string request);
+    std::string generateMethodNotAllowedResponse(std::string contentType, int contentLength);
+    void setnonblocking(int fd);
+    int processMethodNotAllowed(int fd, Server *server);
 };
 
 
