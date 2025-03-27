@@ -5,6 +5,7 @@ std::string Server::getContentType(const std::string &path)
     std::map<std::string, std::string> extensionToType;
     extensionToType.insert(std::make_pair(std::string(".html"), std::string("text/html")));
     extensionToType.insert(std::make_pair(std::string(".css"), std::string("text/css")));
+    extensionToType.insert(std::make_pair(std::string(".txt"), std::string("text/txt")));
     extensionToType.insert(std::make_pair(std::string(".js"), std::string("application/javascript")));
     extensionToType.insert(std::make_pair(std::string(".json"), std::string("application/json")));
     extensionToType.insert(std::make_pair(std::string(".xml"), std::string("application/xml")));

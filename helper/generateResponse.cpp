@@ -1,6 +1,11 @@
 #include "../server.hpp"
 
- std::string Server::createDeleteResponse(std::string path){
+ std::string Server::renderHtml(std::string path, Server *server){
+    (void)server;
+    std::string state = "Success";
+    std::string coler = "rgb(50, 150, 0)";
+    std::string title = "Delete Confirmation";
+    
     std::string message = "<!DOCTYPE html>\n"
     "<html lang=\"en\">\n"
     "<head>\n"
@@ -27,7 +32,7 @@
     "        }\n"
     "        h1 {\n"
     "            font-size: 5rem;\n"
-    "            color:rgb(50, 150, 0);\n"
+    "            color:" + coler + ";\n"
     "        }\n"
     "        p {\n"
     "            font-size: 1.5rem;\n"
@@ -37,11 +42,12 @@
     "    </style>\n"
     "    <meta charset=\"UTF-8\">\n"
     "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
-    "    <title>Delete Confirmation</title>\n"
+    "    <title>" + title + "</title>\n"
     "</head>\n"
     "<body>\n"
     "    <div class=\"error-container\">\n"
-    "        <h1>Success</h1>\n"
+    "        <h1> " + state + "</h1>\n"
+
     "        <p>" + path + "\" deleted successfully.</p>\n"
     "    </div>\n"
     "</body>\n"

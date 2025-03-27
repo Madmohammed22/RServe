@@ -1,6 +1,6 @@
-SRC_DIR1 = /home/mmad/Desktop/Rserve/helper
+SRC_DIR1 = /home/mmad/Desktop/webserve/helper
 
-SRC_DIR2 = /home/mmad/Desktop/Rserve/methods
+SRC_DIR2 = /home/mmad/Desktop/webserve/methods
 
 SRC = server.cpp $(SRC_DIR2)/get.cpp $(SRC_DIR2)/post.cpp $(SRC_DIR2)/delete.cpp \
 	$(SRC_DIR1)/generateResponse.cpp \

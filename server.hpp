@@ -6,12 +6,13 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:18 by mmad              #+#    #+#             */
-/*   Updated: 2025/03/27 03:48:07 by mmad             ###   ########.fr       */
+/*   Updated: 2025/03/27 08:37:19 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
 #define SERVER_HPP
+
 #include <time.h>
 #include <bits/types.h>
 #include "server.hpp"
@@ -40,13 +41,16 @@
 #include <errno.h>     
 #include <string.h>
 
+#define ERROR404 404
+#define ERROR405 405
+#define SUCCESS 200
 
 #define PORT 8080 
 #define MAX_EVENTS 1024
 #define CHUNK_SIZE 1024
 
-#define PATHC "/home/mmad/Desktop/Rserve/root/content/"
-#define PATHE "/home/mmad/Desktop/Rserve/root/error/" 
+#define PATHC "/home/mmad/Desktop/webserve/root/content/"
+#define PATHE "/home/mmad/Desktop/webserve/root/error/" 
 #define PATHU "/workspaces/webserve/root/UPLOAD"
 
 // Structure to hold file transfer state
@@ -83,7 +87,7 @@ public:
     size_t LARGE_FILE_THRESHOLD;
 
 public:
-    std::string createDeleteResponse(std::string path);
+    std::string renderHtml(std::string path, Server *server);
     int handle_post_request(int fd, Server *server, std::string request);
     std::string readFile(const std::string &path);
     std::string createNotFoundResponse(std::string contentType, int contentLength);
@@ -100,6 +104,7 @@ public:
     std::string generateMethodNotAllowedResponse(std::string contentType, int contentLength);
     void setnonblocking(int fd);
     int processMethodNotAllowed(int fd, Server *server);
+    std::string getCurrentTimeInGMT();
 };
 
 

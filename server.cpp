@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:14 by mmad              #+#    #+#             */
-/*   Updated: 2025/03/27 03:53:32 by mmad             ###   ########.fr       */
+/*   Updated: 2025/03/27 08:37:53 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,15 +67,13 @@ int Server::getFileType(std::string path){
     {
         if( s.st_mode & S_IFDIR ) // dir
             return 1;
-        else if( s.st_mode & S_IFREG ) // file
+        if( s.st_mode & S_IFREG ) // file
             return 2;
-        else
-            return 3;
     }
     return -1;
 }
 
-std::string getCurrentTimeInGMT() {
+std::string Server::getCurrentTimeInGMT() {
     time_t t = time(0);
     tm *time_struct = gmtime(&t); // Use gmtime to get UTC time
 
@@ -99,6 +97,7 @@ std::string Server::generateHttpResponse(std::string contentType, size_t content
         << "Content-Length: " << contentLength << "\r\n\r\n";
     return oss.str();
 }
+
 
 std::string Server::createNotFoundResponse(std::string contentType, int contentLength)
 {
@@ -124,19 +123,21 @@ std::string Server::generateMethodNotAllowedResponse(std::string contentType, in
 }
 
 bool Server::canBeOpen(std::string &filePath)
-{ 
+{
     std::string new_path;
     if (getFileType("/" + filePath) == 2)
         new_path = "/" + filePath;
     else if (getFileType("/" + filePath) == 1){
         new_path = "/" + filePath;
     }
-    else
+    else{
+        std::cout << "I was here\n";
         new_path = PATHC + filePath;
+    }
     std::ifstream file(new_path.c_str());
     if (!file.is_open()){
         // std::cout << getFileType(filePath) << std::endl;
-        return std::cerr << "Failed to open file: " << new_path << std::endl, false;
+        return std::cerr << "Failed to open file::::: " << new_path << std::endl, false;
     }
     filePath = new_path;
     return true;
