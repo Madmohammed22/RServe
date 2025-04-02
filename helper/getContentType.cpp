@@ -92,10 +92,13 @@ std::string Server::methodNotAllowedResponse(std::string contentType, int conten
     return oss.str();
 }
 
-std::string Server::createTimeoutResponse(std::string contentType)
+std::string Server::createTimeoutResponse(std::string contentType, size_t contentLength)
 {
     std::ostringstream oss;
     oss << "HTTP/1.1 408 Request Timeout\r\n"
-        << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n\r\n";
+        << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n"
+        << "Last-Modified: " << getCurrentTimeInGMT() << "\r\n"
+        << "Content-Length: " << contentLength << "\r\n\r\n";
+
     return oss.str();
 }

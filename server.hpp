@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:18 by mmad              #+#    #+#             */
-/*   Updated: 2025/04/02 06:29:18 by mmad             ###   ########.fr       */
+/*   Updated: 2025/04/02 15:53:02 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -109,7 +109,7 @@ public:
     void setnonblocking(int fd);
     int processMethodNotAllowed(int fd, Server *server);
     std::string getCurrentTimeInGMT();
-    std::string createTimeoutResponse(std::string contentType);
+    std::string createTimeoutResponse(std::string contentType, size_t contentLength);
 
 };
 

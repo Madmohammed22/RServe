@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:14 by mmad              #+#    #+#             */
-/*   Updated: 2025/04/02 09:08:58 by mmad             ###   ########.fr       */
+/*   Updated: 2025/04/02 16:02:37 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -197,11 +197,11 @@ int Server::handleFileRequest(int fd, Server *server, const std::string &filePat
         if (!readFileChunk(filePath, buffer, 0, fileSize, bytesRead))
             return std::cerr << "Failed to read file: " << filePath << std::endl, delete[] buffer, -1;
 
-        int result = send(fd, buffer, bytesRead, MSG_NOSIGNAL);
+        send(fd, buffer, bytesRead, MSG_NOSIGNAL);
         delete[] buffer;
 
-        if (result == -1)
-            return std::cerr << "Failed to send file content." << std::endl, -1;
+        // if (result == -1)
+        //     return std::cerr << "Failed to send file content." << std::endl, -1;
 
         return 0;
     }
@@ -228,19 +228,19 @@ int returnTimeoutRequest(int fd, Server* server)
     std::string path2 = "408.html";
     std::string new_path = path1 + path2;
     std::string content = server->readFile(new_path);
-    std::string httpResponse = server->createNotFoundResponse(server->getContentType(new_path), content.length());
-
-    server->createTimeoutResponse(server->getContentType(new_path));
+    std::string httpResponse = server->createTimeoutResponse(server->getContentType(new_path), content.length());
+    if (!httpResponse.empty()){
+        if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1){
+            return std::cerr << "Failed to send error response header" << std::endl, -1;
+        }
     
-    if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
-        return std::cerr << "Failed to send error response header" << std::endl, -1;
-
-    if (send(fd, content.c_str(), content.length(), MSG_NOSIGNAL) == -1)
-        return std::cerr << "Failed to send error content" << std::endl, -1;
-
-    if (send(fd, "\r\n\r\n", 2, MSG_NOSIGNAL) == -1)
-        return -1;
-
+        if (send(fd, content.c_str(), content.length(), MSG_NOSIGNAL) == -1)
+            return std::cerr << "Failed to send error content" << std::endl, -1;
+    
+        if (send(fd, "\r\n\r\n", 2, MSG_NOSIGNAL) == -1)
+            return -1;
+    }
+    
     return 0;
 }
 
@@ -250,7 +250,6 @@ void check_timeout(Server *server)
     time_t current_time = time(NULL);
     while (it != server->fileTransfers.end())
     {
-        std::cout << "Time: " <<current_time - it->second.last_activity_time << std::endl; 
         if (current_time - it->second.last_activity_time > TIMEOUT)
         {
             std::cerr << "Client " << it->first << " timed out." << std::endl;
@@ -262,7 +261,6 @@ void check_timeout(Server *server)
         }
         else
         {
-            std::cout << "Client " << it->first << "is active." << std::endl;
             ++it;
         }
     }
@@ -402,3 +400,12 @@ int main(int argc, char **argv)
     delete server;
     return EXIT_SUCCESS;
 }
+
+
+/*
+
+Failed to open file: root/content/favicon.ico
+Failed to send error content
+[Server] Destructor is called
+
+ */
