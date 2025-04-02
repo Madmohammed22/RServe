@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:14 by mmad              #+#    #+#             */
-/*   Updated: 2025/04/02 06:18:32 by mmad             ###   ########.fr       */
+/*   Updated: 2025/04/02 09:08:58 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -228,13 +228,16 @@ void check_timeout(Server *server) {
         if (current_time - it->second.last_activity_time > TIMEOUT){
             std::cerr << "Client " << it->first << " timed out." << std::endl;
             close(it->first);
-            it = server->fileTransfers.erase(it);
+            std::map<int, FileTransferState>::iterator tmp = it;
+            ++it;
+            server->fileTransfers.erase(tmp);
         }
         else{
             ++it;
         }
     }
 }
+
 
 int handleClientConnections(Server *server, int listen_sock, struct epoll_event &ev
     , sockaddr_in &clientAddress, int epollfd, socklen_t &clientLen, std::map<int, std::string> &send_buffers)

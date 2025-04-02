@@ -75,9 +75,9 @@ int DELETE(std::string request){
 // Improved searchOnPath function
 bool searchOnPath(std::vector<std::string>& nodePath, const std::string& filePath) {
     // Iterate through the nodePath vector
-    for (const auto& path : nodePath) {
-        std::cout << "(" << path << ")" << std::endl;
-        if (path == filePath) {
+    std::vector<std::string>::iterator begin = nodePath.begin();
+    while (begin != nodePath.end()) {
+        if (*begin == filePath) {
             return true;
         }
     }

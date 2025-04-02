@@ -3,7 +3,7 @@
 // Read file in chunks with error handling
 bool readFileChunk_post(const std::string &path, char *buffer, size_t offset, size_t chunkSize, size_t &bytesRead)
 {
-    std::ifstream file(path, std::ios::binary);
+    std::ifstream file(path.c_str(), std::ios::binary);
     if (!file.is_open())
     {
         std::cerr << "Failed to open file: " << path << std::endl;
