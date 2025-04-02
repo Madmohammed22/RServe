@@ -48,7 +48,7 @@
 #define PORT 8080 
 #define MAX_EVENTS 10
 #define CHUNK_SIZE 1024
-#define TIMEOUT 10 
+#define TIMEOUT 2
 
 #define PATHC "root/content/"
 #define PATHE "root/error/" 
@@ -63,6 +63,7 @@ struct FileTransferState {
     size_t fileSize;
     bool isComplete;
     int socket;
+    int saveFd;
     std::set<std::string> knownPaths;
     FileTransferState() : offset(0), fileSize(0), isComplete(false) {}
 };
@@ -108,6 +109,8 @@ public:
     void setnonblocking(int fd);
     int processMethodNotAllowed(int fd, Server *server);
     std::string getCurrentTimeInGMT();
+    std::string createTimeoutResponse(std::string contentType);
+
 };
 
 
