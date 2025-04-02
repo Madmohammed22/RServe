@@ -143,7 +143,6 @@ int Server::continueFileTransfer(int fd, Server *server)
     // Check if we've sent the entire file
     if (state.offset >= state.fileSize)
     {
-        // sendFinalChunk(fd);
         if (!sendFinalChunk(fd))
         {
             std::cerr << "Failed to send final chunk." << std::endl;
@@ -251,6 +250,7 @@ void check_timeout(Server *server)
     time_t current_time = time(NULL);
     while (it != server->fileTransfers.end())
     {
+        std::cout << "Time: " <<current_time - it->second.last_activity_time << std::endl; 
         if (current_time - it->second.last_activity_time > TIMEOUT)
         {
             std::cerr << "Client " << it->first << " timed out." << std::endl;

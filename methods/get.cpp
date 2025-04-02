@@ -2,8 +2,6 @@
 
 int Server::serve_file_request(int fd, Server *server, std::string request)
 {
-    if (request.empty())
-        return -1;
     // Check if we already have a file transfer in progress
     if (server->fileTransfers.find(fd) != server->fileTransfers.end())
     {

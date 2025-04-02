@@ -48,7 +48,7 @@
 #define PORT 8080 
 #define MAX_EVENTS 10
 #define CHUNK_SIZE 1024
-#define TIMEOUT 2
+#define TIMEOUT 10
 
 #define PATHC "root/content/"
 #define PATHE "root/error/" 
