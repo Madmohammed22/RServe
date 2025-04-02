@@ -1,6 +1,6 @@
 #include "../server.hpp"
 
-std::string Server::parseRequest(std::string request, Server *server)
+std::string Server:: parseRequest(std::string request, Server *server)
 {
     (void)server;
     std::cout << "-------( REQUEST PARSED )-------\n\n";

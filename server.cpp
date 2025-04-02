@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:14 by mmad              #+#    #+#             */
-/*   Updated: 2025/03/27 08:37:53 by mmad             ###   ########.fr       */
+/*   Updated: 2025/04/02 06:18:32 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,67 +61,6 @@ bool readFileChunk(const std::string &path, char *buffer, size_t offset, size_t 
     return true;
 }
 
-int Server::getFileType(std::string path){
-    struct stat s;
-    if( stat(path.c_str(), &s) == 0 )
-    {
-        if( s.st_mode & S_IFDIR ) // dir
-            return 1;
-        if( s.st_mode & S_IFREG ) // file
-            return 2;
-    }
-    return -1;
-}
-
-std::string Server::getCurrentTimeInGMT() {
-    time_t t = time(0);
-    tm *time_struct = gmtime(&t); // Use gmtime to get UTC time
-
-    char buffer[100];
-    strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", time_struct);
-    std::string date = buffer;
-    return date;
-}
-
-std::string Server::createChunkedHttpResponse(std::string contentType)
-{
-    return "HTTP/1.1 200 OK\r\nContent-Type: " + contentType + "; charset=utf-8" + "\r\nTransfer-Encoding: chunked\r\n\r\n";
-}
-
-std::string Server::generateHttpResponse(std::string contentType, size_t contentLength)
-{
-    std::ostringstream oss;
-    oss << "HTTP/1.1 200 OK\r\n"
-        << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n"
-        << "Last-Modified: " << getCurrentTimeInGMT() << "\r\n"
-        << "Content-Length: " << contentLength << "\r\n\r\n";
-    return oss.str();
-}
-
-
-std::string Server::createNotFoundResponse(std::string contentType, int contentLength)
-{
-    std::ostringstream oss;
-    oss << "HTTP/1.1 404 Not Found\r\n"
-        << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n"
-        << "Last-Modified: " << getCurrentTimeInGMT() << "\r\n"
-        << "Content-Length: " << contentLength << "\r\n\r\n";
-
-    return oss.str();
-}
-
-std::string Server::generateMethodNotAllowedResponse(std::string contentType, int contentLength)
-{
-    (void)contentLength;
-    std::ostringstream oss;
-    oss << "HTTP/1.1 405 Method Not Allowed\r\n"
-        << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n"
-        << "Allow: GET, POST, DELETE\r\n\r\n";
-        
-    // << "Content-Length: " << contentLength << "\r\n"
-    return oss.str();
-}
-
 bool Server::canBeOpen(std::string &filePath)
 {
     std::string new_path;
@@ -131,13 +70,12 @@ bool Server::canBeOpen(std::string &filePath)
         new_path = "/" + filePath;
     }
     else{
-        std::cout << "I was here\n";
         new_path = PATHC + filePath;
     }
     std::ifstream file(new_path.c_str());
     if (!file.is_open()){
         // std::cout << getFileType(filePath) << std::endl;
-        return std::cerr << "Failed to open file::::: " << new_path << std::endl, false;
+        return std::cerr << "Failed to open file: " << new_path << std::endl, false;
     }
     filePath = new_path;
     return true;
@@ -241,13 +179,14 @@ int Server::handleFileRequest(int fd, Server *server, const std::string &filePat
         state.fileSize = fileSize;
         state.offset = 0;
         state.isComplete = false;
+        state.last_activity_time = time(NULL); // Initialize this!
         server->fileTransfers[fd] = state;
         return server->continueFileTransfer(fd, server);
     }
     else
     {
         // Use standard Content-Length for smaller files
-        std::string httpResponse = server->generateHttpResponse(contentType, fileSize);
+        std::string httpResponse = server->httpResponse(contentType, fileSize);
         if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send HTTP header." << std::endl, -1;
         
@@ -282,6 +221,21 @@ std::string Server::readFile(const std::string &path)
     return oss.str();
 }
 
+void check_timeout(Server *server) {
+    std::map<int, FileTransferState>::iterator it = server->fileTransfers.begin();
+    time_t current_time = time(NULL);
+    while (it != server->fileTransfers.end()){
+        if (current_time - it->second.last_activity_time > TIMEOUT){
+            std::cerr << "Client " << it->first << " timed out." << std::endl;
+            close(it->first);
+            it = server->fileTransfers.erase(it);
+        }
+        else{
+            ++it;
+        }
+    }
+}
+
 int handleClientConnections(Server *server, int listen_sock, struct epoll_event &ev
     , sockaddr_in &clientAddress, int epollfd, socklen_t &clientLen, std::map<int, std::string> &send_buffers)
 {
@@ -310,8 +264,6 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
         else if (events[i].events & EPOLLIN)
         {
             int bytes = recv(events[i].data.fd, buffer, sizeof(buffer), 0);
-            // if (bytes == -1)
-            //     return std::cerr << "recv" << std::endl, EXIT_FAILURE;
             if (bytes == 0)
             {
                 if (server->fileTransfers.find(events[i].data.fd) != server->fileTransfers.end())
@@ -405,6 +357,7 @@ int main(int argc, char **argv)
     std::map<int, std::string> send_buffers;
     while (true)
     {
+        check_timeout(server);  // Check for timeouts every loop iteration
         if (handleClientConnections(server, listen_sock, ev, clientAddress, epollfd, clientLen, send_buffers) == EXIT_FAILURE)
             break;
     }

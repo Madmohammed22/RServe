@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:18 by mmad              #+#    #+#             */
-/*   Updated: 2025/03/27 08:37:19 by mmad             ###   ########.fr       */
+/*   Updated: 2025/04/02 06:29:18 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,27 +40,30 @@
 #include <sys/stat.h>  
 #include <errno.h>     
 #include <string.h>
-
+#include <set>
 #define ERROR404 404
 #define ERROR405 405
 #define SUCCESS 200
 
 #define PORT 8080 
-#define MAX_EVENTS 1024
+#define MAX_EVENTS 10
 #define CHUNK_SIZE 1024
+#define TIMEOUT 10 
 
-#define PATHC "/home/mmad/Desktop/webserve/root/content/"
-#define PATHE "/home/mmad/Desktop/webserve/root/error/" 
-#define PATHU "/workspaces/webserve/root/UPLOAD"
+#define PATHC "root/content/"
+#define PATHE "root/error/" 
+#define PATHU "root/UPLOAD"
 
 // Structure to hold file transfer state
 struct FileTransferState {
+    time_t last_activity_time;
     std::string filePath;
     size_t offset;
     size_t endOffset;
     size_t fileSize;
     bool isComplete;
-    
+    int socket;
+    std::set<std::string> knownPaths;
     FileTransferState() : offset(0), fileSize(0), isComplete(false) {}
 };
 
@@ -96,12 +99,12 @@ public:
     bool canBeOpen(std::string &filePath);
     std::string createChunkedHttpResponse(std::string contentType);
     std::ifstream::pos_type getFileSize(const std::string &path);
-    std::string generateHttpResponse(std::string contentType, size_t contentLength);
+    std::string httpResponse(std::string contentType, size_t contentLength);
     int handle_delete_request(int fd, Server *server,std::string request);
     int continueFileTransfer(int fd, Server * server);
     int handleFileRequest(int fd, Server *server, const std::string &filePath);
     int serve_file_request(int fd, Server *server, std::string request);
-    std::string generateMethodNotAllowedResponse(std::string contentType, int contentLength);
+    std::string methodNotAllowedResponse(std::string contentType, int contentLength);
     void setnonblocking(int fd);
     int processMethodNotAllowed(int fd, Server *server);
     std::string getCurrentTimeInGMT();

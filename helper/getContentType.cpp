@@ -30,3 +30,64 @@ std::string Server::getContentType(const std::string &path)
     }
     return "application/octet-stream";
 }
+
+std::string Server::getCurrentTimeInGMT() {
+    time_t t = time(0);
+    tm *time_struct = gmtime(&t); // Use gmtime to get UTC time
+
+    char buffer[100];
+    strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", time_struct);
+    std::string date = buffer;
+    return date;
+}
+
+int Server::getFileType(std::string path){
+    struct stat s;
+    if( stat(path.c_str(), &s) == 0 )
+    {
+        if( s.st_mode & S_IFDIR ) // dir
+            return 1;
+        if( s.st_mode & S_IFREG ) // file
+            return 2;
+    }
+    return -1;
+}
+
+std::string Server::createChunkedHttpResponse(std::string contentType)
+{
+    return "HTTP/1.1 200 OK\r\nContent-Type: " + contentType + "; charset=utf-8" + "\r\nTransfer-Encoding: chunked\r\n\r\n";
+}
+
+std::string Server::httpResponse(std::string contentType, size_t contentLength)
+{
+    std::ostringstream oss;
+    oss << "HTTP/1.1 200 OK\r\n"
+        << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n"
+        << "Last-Modified: " << getCurrentTimeInGMT() << "\r\n"
+        << "Content-Length: " << contentLength << "\r\n\r\n";
+    return oss.str();
+}
+
+
+std::string Server::createNotFoundResponse(std::string contentType, int contentLength)
+{
+    std::ostringstream oss;
+    oss << "HTTP/1.1 404 Not Found\r\n"
+        << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n"
+        << "Last-Modified: " << getCurrentTimeInGMT() << "\r\n"
+        << "Content-Length: " << contentLength << "\r\n\r\n";
+
+    return oss.str();
+}
+
+std::string Server::methodNotAllowedResponse(std::string contentType, int contentLength)
+{
+    (void)contentLength;
+    std::ostringstream oss;
+    oss << "HTTP/1.1 405 Method Not Allowed\r\n"
+        << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n"
+        << "Allow: GET, POST, DELETE\r\n\r\n";
+        
+    // << "Content-Length: " << contentLength << "\r\n"
+    return oss.str();
+}
