@@ -211,52 +211,42 @@ int handleFileRequest_post(int fd, Server *server, const std::string &filePath)
     }
 }
 
-std::pair<std::string, std::string> ft_parseRequest(std::string request)
+std::pair<std::string, std::string> ft_parseRequest(std::string header)
 {
-    std::pair<std::string, std::string> pair_request(request.substr(0, request.find("\r\n\r\n", 0)),
-                                                     request.substr(request.find("\r\n\r\n", 0), request.length()));
+    
+    std::pair<std::string, std::string> pair_request(header.substr(0, header.find("\r\n\r\n", 0)),
+    header.substr(header.find("\r\n\r\n", 0), header.length()));
     return pair_request;
 }
 
-size_t returnTargetFromRequest(std::string request, std::string target)
+size_t returnTargetFromRequest(std::string header, std::string body, std::string target)
 {
+    (void)body;
     std::set<std::string> node;
-    char *result = strstr((char *)request.c_str(), (char *)target.c_str());
-    size_t j = 0;
-    for (size_t i = 0; i < strlen(result); i++)
-    {
-        if (result[i] == '\n')
-        {
-            node.insert(static_cast<std::string>(result).substr(j, i));
-            j = i + 1;
-        }
-    }
-    std::set<std::string>::iterator it = node.begin();
-    size_t n;
-    while (it != node.end())
-    {
-        n = static_cast<size_t>(atoi((it->substr((it->find((char *)(" "), 0)) + 1, it->length())).c_str()));
-        it++;
-    }
-    return n;
+    char *result = strstr((char *)header.c_str(), (char *)target.c_str());
+    std::string number_str = result;
+    number_str = number_str.substr(number_str.find(" ", 0), number_str.length());
+    return static_cast<size_t>(atoi((number_str.substr(number_str.find(" ", 0), number_str.length())).c_str()));
 }
 
-int Server::handle_post_request(int fd, Server *server, std::string request)
+int Server::handle_post_request(int fd, Server *server, std::string header)
 {
-    std::pair<std::string, std::string> pair_request = ft_parseRequest(request);
-    if (returnTargetFromRequest(pair_request.first, "Content-Length") == 0)
+    std::pair<std::string, std::string> pair_request = ft_parseRequest(header);
+    if (returnTargetFromRequest(pair_request.first,pair_request.second, "Content-Length") == 0)
     {
-        //--------
+        std::cout << "I can know send a bad request" << std::endl;
+          
     }
-
     // Check if we already have a file transfer in progress
     if (server->fileTransfers.find(fd) != server->fileTransfers.end())
     {
         // Continue the existing transfer
         return continueFileTransfer_post(fd, server);
     }
-
-    std::string filePath = server->parseRequest(request, server);
+    // std::cout << "--------------------------\n";
+    // std::cout << "[2]" << pair_request.second << std::endl;
+    // std::cout << "--------------------------\n";
+    std::string filePath = server->parseRequest(pair_request.first, server);
     if (canBeOpen(filePath) && getFileType(filePath) == 2)
     {
         return handleFileRequest_post(fd, server, filePath);
