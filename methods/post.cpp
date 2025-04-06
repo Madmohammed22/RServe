@@ -211,11 +211,42 @@ int handleFileRequest_post(int fd, Server *server, const std::string &filePath)
     }
 }
 
+std::pair<std::string, std::string> ft_parseRequest(std::string request)
+{
+    std::pair<std::string, std::string> pair_request(request.substr(0, request.find("\r\n\r\n", 0)),
+                                                     request.substr(request.find("\r\n\r\n", 0), request.length()));
+    return pair_request;
+}
+
+size_t returnTargetFromRequest(std::string request, std::string target)
+{
+    std::set<std::string> node;
+    char *result = strstr((char *)request.c_str(), (char *)target.c_str());
+    size_t j = 0;
+    for (size_t i = 0; i < strlen(result); i++)
+    {
+        if (result[i] == '\n')
+        {
+            node.insert(static_cast<std::string>(result).substr(j, i));
+            j = i + 1;
+        }
+    }
+    std::set<std::string>::iterator it = node.begin();
+    size_t n;
+    while (it != node.end())
+    {
+        n = static_cast<size_t>(atoi((it->substr((it->find((char *)(" "), 0)) + 1, it->length())).c_str()));
+        it++;
+    }
+    return n;
+}
+
 int Server::handle_post_request(int fd, Server *server, std::string request)
 {
-    if (request.empty())
+    std::pair<std::string, std::string> pair_request = ft_parseRequest(request);
+    if (returnTargetFromRequest(pair_request.first, "Content-Length") == 0)
     {
-        return -1;
+        //--------
     }
 
     // Check if we already have a file transfer in progress

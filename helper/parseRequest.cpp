@@ -50,15 +50,17 @@ std::string Server:: parseRequest(std::string request, Server *server)
     startPos = request.find("POST /");
     if (startPos != std::string::npos)
     {
-        startPos += 6;
+        startPos += 5;
         size_t endPos = request.find(" HTTP/", startPos);
         if (endPos != std::string::npos)
         {
             std::string requestedPath = request.substr(startPos, endPos - startPos);
-            if (!requestedPath.empty() && requestedPath != "/")
+            if (!requestedPath.empty() && requestedPath == "/")
             {
-                filePath = requestedPath;
+                filePath = PATHC;
             }
+            else
+                return requestedPath;
         }
         return filePath;
     }

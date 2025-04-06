@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:14 by mmad              #+#    #+#             */
-/*   Updated: 2025/04/02 16:02:37 by mmad             ###   ########.fr       */
+/*   Updated: 2025/04/06 09:51:04 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -304,7 +304,7 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
             {
                 buffer[bytes] = '\0';
                 request = buffer;
-                send_buffers[events[i].data.fd] = request;
+                send_buffers[events[i].data.fd] += request;
             }
         }
         else if (events[i].events & EPOLLOUT)
@@ -324,6 +324,7 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
 
             if (request.find("POST") != std::string::npos)
             {
+                
                 if (server->handle_post_request(events[i].data.fd, server, request) == -1)
                     return EXIT_FAILURE;
             }
