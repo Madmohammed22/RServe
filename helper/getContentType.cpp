@@ -80,6 +80,16 @@ std::string Server::createNotFoundResponse(std::string contentType, int contentL
     return oss.str();
 }
 
+std::string Server::createBadResponse(std::string contentType, int contentLength)
+{
+    std::ostringstream oss;
+    oss << "HTTP/1.1 400 Bad Request\r\n"
+        << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n"
+        << "Last-Modified: " << getCurrentTimeInGMT() << "\r\n"
+        << "Content-Length: " << contentLength << "\r\n\r\n";
+
+    return oss.str();
+}
 std::string Server::methodNotAllowedResponse(std::string contentType, int contentLength)
 {
     (void)contentLength;

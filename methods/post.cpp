@@ -213,9 +213,9 @@ int handleFileRequest_post(int fd, Server *server, const std::string &filePath)
 
 std::pair<std::string, std::string> ft_parseRequest(std::string header)
 {
-    
+
     std::pair<std::string, std::string> pair_request(header.substr(0, header.find("\r\n\r\n", 0)),
-    header.substr(header.find("\r\n\r\n", 0), header.length()));
+                                                     header.substr(header.find("\r\n\r\n", 0), header.length()));
     return pair_request;
 }
 
@@ -229,13 +229,51 @@ size_t returnTargetFromRequest(std::string header, std::string body, std::string
     return static_cast<size_t>(atoi((number_str.substr(number_str.find(" ", 0), number_str.length())).c_str()));
 }
 
+int fo(int fd, Server *server)
+{
+    // Handle 404 Not Found scenario
+    std::string path1 = PATHE;
+    std::string path2 = "400.html";
+    std::string new_path = path1 + path2;
+    std::string content = server->readFile(new_path);
+    std::string httpResponse = server->createBadResponse(server->getContentType(new_path), content.length());
+
+    // Consolidated error handling
+    try
+    {
+        if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
+        {
+            throw std::runtime_error("Failed to send error response header");
+        }
+
+        if (send(fd, content.c_str(), content.length(), MSG_NOSIGNAL) == -1)
+        {
+            throw std::runtime_error("Failed to send error content");
+        }
+
+        if (send(fd, "\r\n\r\n", 2, MSG_NOSIGNAL) == -1)
+        {
+            throw std::runtime_error("Failed to send final CRLF");
+        }
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << e.what() << std::endl;
+        close(fd);
+        return -1;
+    }
+
+    server->fileTransfers.erase(fd);
+    close(fd);
+    return 0;
+}
+
 int Server::handle_post_request(int fd, Server *server, std::string header)
 {
     std::pair<std::string, std::string> pair_request = ft_parseRequest(header);
-    if (returnTargetFromRequest(pair_request.first,pair_request.second, "Content-Length") == 0)
+    if (returnTargetFromRequest(pair_request.first, pair_request.second, "Content-Length") == 0)
     {
-        std::cout << "I can know send a bad request" << std::endl;
-          
+        return fo(fd, server);
     }
     // Check if we already have a file transfer in progress
     if (server->fileTransfers.find(fd) != server->fileTransfers.end())

@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:18 by mmad              #+#    #+#             */
-/*   Updated: 2025/04/02 15:53:02 by mmad             ###   ########.fr       */
+/*   Updated: 2025/04/06 11:49:19 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -110,7 +110,7 @@ public:
     int processMethodNotAllowed(int fd, Server *server);
     std::string getCurrentTimeInGMT();
     std::string createTimeoutResponse(std::string contentType, size_t contentLength);
-
+    std::string createBadResponse(std::string contentType, int contentLength);
 };
 
 
