@@ -8,6 +8,7 @@ std::string Server::getContentType(const std::string &path)
     extensionToType.insert(std::make_pair(std::string(".txt"), std::string("text/txt")));
     extensionToType.insert(std::make_pair(std::string(".js"), std::string("application/javascript")));
     extensionToType.insert(std::make_pair(std::string(".json"), std::string("application/json")));
+    extensionToType.insert(std::make_pair(std::string(".cpp"), std::string("application/cpp")));
     extensionToType.insert(std::make_pair(std::string(".xml"), std::string("application/xml")));
     extensionToType.insert(std::make_pair(std::string(".mp4"), std::string("video/mp4")));
     extensionToType.insert(std::make_pair(std::string(".mp3"), std::string("audio/mpeg")));
