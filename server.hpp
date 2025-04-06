@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:18 by mmad              #+#    #+#             */
-/*   Updated: 2025/04/06 11:49:19 by mmad             ###   ########.fr       */
+/*   Updated: 2025/04/06 14:02:27 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,7 +94,7 @@ public:
     std::string renderHtml(std::string path, Server *server);
     int handle_post_request(int fd, Server *server, std::string request);
     std::string readFile(const std::string &path);
-    std::string createNotFoundResponse(std::string contentType, int contentLength);
+    static std::string createNotFoundResponse(std::string contentType, size_t contentLength);
     std::string parseRequest(std::string request, Server *server);
     int getFileType(std::string path);
     bool canBeOpen(std::string &filePath);
@@ -108,9 +108,9 @@ public:
     std::string methodNotAllowedResponse(std::string contentType, int contentLength);
     void setnonblocking(int fd);
     int processMethodNotAllowed(int fd, Server *server);
-    std::string getCurrentTimeInGMT();
+    static std::string getCurrentTimeInGMT();
     std::string createTimeoutResponse(std::string contentType, size_t contentLength);
-    std::string createBadResponse(std::string contentType, int contentLength);
+    static std::string createBadResponse(std::string contentType, size_t contentLength);
 };
 
 

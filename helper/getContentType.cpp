@@ -69,7 +69,7 @@ std::string Server::httpResponse(std::string contentType, size_t contentLength)
 }
 
 
-std::string Server::createNotFoundResponse(std::string contentType, int contentLength)
+std::string Server::createNotFoundResponse(std::string contentType, size_t contentLength)
 {
     std::ostringstream oss;
     oss << "HTTP/1.1 404 Not Found\r\n"
@@ -80,16 +80,29 @@ std::string Server::createNotFoundResponse(std::string contentType, int contentL
     return oss.str();
 }
 
-std::string Server::createBadResponse(std::string contentType, int contentLength)
+
+std::string getCurrentTimeInGMT1() {
+    time_t t = time(0);
+    tm *time_struct = gmtime(&t); // Use gmtime to get UTC time
+
+    char buffer[100];
+    strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", time_struct);
+    std::string date = buffer;
+    return date;
+}
+
+
+std::string Server::createBadResponse(std::string contentType, size_t contentLength)
 {
     std::ostringstream oss;
     oss << "HTTP/1.1 400 Bad Request\r\n"
         << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n"
-        << "Last-Modified: " << getCurrentTimeInGMT() << "\r\n"
+        << "Last-Modified: " << getCurrentTimeInGMT1() << "\r\n"
         << "Content-Length: " << contentLength << "\r\n\r\n";
 
     return oss.str();
 }
+
 std::string Server::methodNotAllowedResponse(std::string contentType, int contentLength)
 {
     (void)contentLength;

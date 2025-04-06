@@ -153,11 +153,6 @@ int handleFileRequest_post(int fd, Server *server, const std::string &filePath)
         std::string contentType = server->getContentType(filePath);
         size_t fileSize = server->getFileSize(filePath);
 
-        // if (fileSize == 0) {
-        //     std::cerr << "Failed to get file size or empty file: " << filePath << std::endl;
-        //     return -1;
-        // }
-
         if (fileSize > server->LARGE_FILE_THRESHOLD)
         {
             std::string httpResponse = server->createChunkedHttpResponse(contentType);
@@ -229,15 +224,14 @@ size_t returnTargetFromRequest(std::string header, std::string body, std::string
     return static_cast<size_t>(atoi((number_str.substr(number_str.find(" ", 0), number_str.length())).c_str()));
 }
 
-int fo(int fd, Server *server)
+int getSpecificRespond(int fd, Server *server, std::string file, std::string (*f)(std::string, size_t))
 {
     // Handle 404 Not Found scenario
     std::string path1 = PATHE;
-    std::string path2 = "400.html";
+    std::string path2 = file;
     std::string new_path = path1 + path2;
     std::string content = server->readFile(new_path);
-    std::string httpResponse = server->createBadResponse(server->getContentType(new_path), content.length());
-
+    std::string httpResponse = f(server->getContentType(new_path), content.length());
     // Consolidated error handling
     try
     {
@@ -268,12 +262,13 @@ int fo(int fd, Server *server)
     return 0;
 }
 
+
 int Server::handle_post_request(int fd, Server *server, std::string header)
 {
     std::pair<std::string, std::string> pair_request = ft_parseRequest(header);
     if (returnTargetFromRequest(pair_request.first, pair_request.second, "Content-Length") == 0)
     {
-        return fo(fd, server);
+        return getSpecificRespond(fd, server, "400.html", server->createBadResponse);
     }
     // Check if we already have a file transfer in progress
     if (server->fileTransfers.find(fd) != server->fileTransfers.end())
@@ -290,41 +285,9 @@ int Server::handle_post_request(int fd, Server *server, std::string header)
         return handleFileRequest_post(fd, server, filePath);
     }
     else
-    {
+    { 
         // Handle 404 Not Found scenario
-        std::string path1 = PATHE;
-        std::string path2 = "404.html";
-        std::string new_path = path1 + path2;
-        std::string content = readFile(new_path);
-        std::string httpResponse = createNotFoundResponse(server->getContentType(new_path), content.length());
-
-        // Consolidated error handling
-        try
-        {
-            if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
-            {
-                throw std::runtime_error("Failed to send error response header");
-            }
-
-            if (send(fd, content.c_str(), content.length(), MSG_NOSIGNAL) == -1)
-            {
-                throw std::runtime_error("Failed to send error content");
-            }
-
-            if (send(fd, "\r\n\r\n", 2, MSG_NOSIGNAL) == -1)
-            {
-                throw std::runtime_error("Failed to send final CRLF");
-            }
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << e.what() << std::endl;
-            close(fd);
-            return -1;
-        }
-
-        server->fileTransfers.erase(fd);
-        close(fd);
+        return getSpecificRespond(fd, server, "404.html", server->createNotFoundResponse); 
     }
     return 0;
 }
