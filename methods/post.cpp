@@ -93,7 +93,7 @@ int redirectTheParh(std::vector<char> buffer, std::string filePath, size_t bytes
     return 0;
 }
 
-int continueFileTransfer_post(int fd, Server *server)
+int continueFileTransferPost(int fd, Server *server)
 {
     std::map<int, FileTransferState>::iterator transferIt = server->fileTransfers.find(fd);
     if (transferIt == server->fileTransfers.end())
@@ -169,7 +169,7 @@ int handleFileRequest_post(int fd, Server *server, const std::string &filePath)
             state.isComplete = false;
             server->fileTransfers[fd] = state;
 
-            return continueFileTransfer_post(fd, server);
+            return continueFileTransferPost(fd, server);
         }
         else
         {
@@ -274,12 +274,11 @@ int Server::handle_post_request(int fd, Server *server, std::string header)
     if (server->fileTransfers.find(fd) != server->fileTransfers.end())
     {
         // Continue the existing transfer
-        return continueFileTransfer_post(fd, server);
+        return continueFileTransferPost(fd, server);
     }
-    // std::cout << "--------------------------\n";
-    // std::cout << "[2]" << pair_request.second << std::endl;
-    // std::cout << "--------------------------\n";
+    
     std::string filePath = server->parseRequest(pair_request.first, server);
+    std::cout << filePath << std::endl;
     if (canBeOpen(filePath) && getFileType(filePath) == 2)
     {
         return handleFileRequest_post(fd, server, filePath);
