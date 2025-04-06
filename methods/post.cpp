@@ -214,14 +214,16 @@ std::pair<std::string, std::string> ft_parseRequest(std::string header)
     return pair_request;
 }
 
-size_t returnTargetFromRequest(std::string header, std::string body, std::string target)
+std::pair<size_t, std::string> returnTargetFromRequest(std::string header, std::string target)
 {
-    (void)body;
+    std::pair<size_t, std::string> pair_target;
     std::set<std::string> node;
     char *result = strstr((char *)header.c_str(), (char *)target.c_str());
-    std::string number_str = result;
-    number_str = number_str.substr(number_str.find(" ", 0), number_str.length());
-    return static_cast<size_t>(atoi((number_str.substr(number_str.find(" ", 0), number_str.length())).c_str()));
+    std::string reachTarget = result;
+    reachTarget = reachTarget.substr(reachTarget.find(" ", 0), reachTarget.length());
+    pair_target.first = static_cast<size_t>(atoi((reachTarget.substr(reachTarget.find(" ", 0), reachTarget.length())).c_str())); 
+    pair_target.second = reachTarget.substr(reachTarget.find(" ", 0), reachTarget.length());
+    return pair_target;
 }
 
 int getSpecificRespond(int fd, Server *server, std::string file, std::string (*f)(std::string, size_t))
@@ -266,7 +268,7 @@ int getSpecificRespond(int fd, Server *server, std::string file, std::string (*f
 int Server::handle_post_request(int fd, Server *server, std::string header)
 {
     std::pair<std::string, std::string> pair_request = ft_parseRequest(header);
-    if (returnTargetFromRequest(pair_request.first, pair_request.second, "Content-Length") == 0)
+    if (returnTargetFromRequest(pair_request.first, "Content-Length").first == 0)
     {
         return getSpecificRespond(fd, server, "400.html", server->createBadResponse);
     }
@@ -276,7 +278,7 @@ int Server::handle_post_request(int fd, Server *server, std::string header)
         // Continue the existing transfer
         return continueFileTransferPost(fd, server);
     }
-    
+    std::cout << "--> " << returnTargetFromRequest(pair_request.first, "Content-Type").second << std::endl;
     std::string filePath = server->parseRequest(pair_request.first, server);
     std::cout << filePath << std::endl;
     if (canBeOpen(filePath) && getFileType(filePath) == 2)
