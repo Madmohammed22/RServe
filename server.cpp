@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:14 by mmad              #+#    #+#             */
-/*   Updated: 2025/04/06 09:51:04 by mmad             ###   ########.fr       */
+/*   Updated: 2025/04/08 09:04:02 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,12 +62,15 @@ bool readFileChunk(const std::string &path, char *buffer, size_t offset, size_t 
 
 bool Server::canBeOpen(std::string &filePath)
 {
+
     std::string new_path;
     if (getFileType("/" + filePath) == 2)
         new_path = "/" + filePath;
     else if (getFileType("/" + filePath) == 1)
     {
-        new_path = "/" + filePath;
+        // new_path = filePath;
+        // std::cout << "sakdasd:" <<  filePath << std::endl;
+        return true;
     }
     else
     {
@@ -222,25 +225,27 @@ std::string Server::readFile(const std::string &path)
     return oss.str();
 }
 
-int returnTimeoutRequest(int fd, Server* server)
+int returnTimeoutRequest(int fd, Server *server)
 {
     std::string path1 = PATHE;
     std::string path2 = "408.html";
     std::string new_path = path1 + path2;
     std::string content = server->readFile(new_path);
     std::string httpResponse = server->createTimeoutResponse(server->getContentType(new_path), content.length());
-    if (!httpResponse.empty()){
-        if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1){
+    if (!httpResponse.empty())
+    {
+        if (send(fd, httpResponse.c_str(), httpResponse.length(), MSG_NOSIGNAL) == -1)
+        {
             return std::cerr << "Failed to send error response header" << std::endl, -1;
         }
-    
+
         if (send(fd, content.c_str(), content.length(), MSG_NOSIGNAL) == -1)
             return std::cerr << "Failed to send error content" << std::endl, -1;
-    
+
         if (send(fd, "\r\n\r\n", 2, MSG_NOSIGNAL) == -1)
             return -1;
     }
-    
+
     return 0;
 }
 
@@ -304,11 +309,20 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
             {
                 buffer[bytes] = '\0';
                 request = buffer;
+                // std::cout << "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh\n";
+                // std::cout << events[i].data.fd << std::endl;
                 send_buffers[events[i].data.fd] += request;
+                // std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&\n";
+                // std::cout << send_buffers[events[i].data.fd] << std::endl;
+                // std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&\n";
             }
         }
         else if (events[i].events & EPOLLOUT)
         {
+            // std::cout << "******************************\n";
+            // std::cout << events[i].data.fd << std::endl;
+            // std::cout << "******************************\n";
+
             // Check if we have an ongoing file transfer
             if (server->fileTransfers.find(events[i].data.fd) != server->fileTransfers.end())
             {
@@ -318,13 +332,18 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
             }
 
             // Otherwise process new request
+            /*
+            dsfdfs
+            */
             request = send_buffers[events[i].data.fd];
+            // std::cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$\n";
+            // std::cout << request << std::endl;
+            // std::cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$\n";
             if (request.empty())
                 continue;
 
             if (request.find("POST") != std::string::npos)
             {
-                
                 if (server->handle_post_request(events[i].data.fd, server, request) == -1)
                     return EXIT_FAILURE;
             }
@@ -338,10 +357,15 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
                 if (server->serve_file_request(events[i].data.fd, server, request) == -1)
                     return EXIT_FAILURE;
             }
-            else
+            else if (request.find("PUT") != std::string::npos || request.find("PATCH") != std::string::npos 
+                || request.find("HEAD") != std::string::npos || request.find("OPTIONS") != std::string::npos)
             {
                 if (server->processMethodNotAllowed(events[i].data.fd, server) == -1)
                     return EXIT_FAILURE;
+            }
+            else
+            {
+                continue;
             }
 
             // Clear the buffer after processing to avoid reprocessing
@@ -401,12 +425,3 @@ int main(int argc, char **argv)
     delete server;
     return EXIT_SUCCESS;
 }
-
-
-/*
-
-Failed to open file: root/content/favicon.ico
-Failed to send error content
-[Server] Destructor is called
-
- */

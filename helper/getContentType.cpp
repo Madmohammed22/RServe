@@ -60,7 +60,7 @@ std::string Server::createChunkedHttpResponse(std::string contentType)
 }
 
 std::string Server::httpResponse(std::string contentType, size_t contentLength)
-{
+{   
     std::ostringstream oss;
     oss << "HTTP/1.1 200 OK\r\n"
         << "Content-Type: " << contentType + "; charset=utf-8" << "\r\n"

@@ -97,17 +97,11 @@ int continueFileTransferPost(int fd, Server *server)
 {
     std::map<int, FileTransferState>::iterator transferIt = server->fileTransfers.find(fd);
     if (transferIt == server->fileTransfers.end())
-    {
-        std::cerr << "No file transfer in progress for fd: " << fd << std::endl;
-        return -1;
-    }
+        return std::cerr << "No file transfer in progress for fd: " << fd << std::endl, -1;
 
     FileTransferState &state = transferIt->second;
     if (state.isComplete)
-    {
-        server->fileTransfers.erase(transferIt);
-        return 0;
-    }
+        return server->fileTransfers.erase(transferIt), 0;
 
     char buffer[CHUNK_SIZE];
     size_t remainingBytes = state.fileSize - state.offset;
@@ -189,12 +183,15 @@ int handleFileRequest_post(int fd, Server *server, const std::string &filePath)
                 std::cerr << "Failed to read file: " << filePath << std::endl;
                 return -1;
             }
-
-            if (send(fd, buffer.data(), bytesRead, MSG_NOSIGNAL) == -1)
-            {
-                std::cerr << "Failed to send file content." << std::endl;
-                return -1;
-            }
+            // std::cout << "#########################\n";
+            // std::cout << buffer.data()  << std::endl;
+            // std::cout << "#########################\n";
+            // exit(0);
+            // if (send(fd, buffer.data(), bytesRead, MSG_NOSIGNAL) == -1)
+            // {
+            //     std::cerr << "Failed to send file content." << std::endl;
+            //     return -1;
+            // }
 
             return redirectTheParh(buffer, filePath, bytesRead);
         }
@@ -273,17 +270,23 @@ int Server::handle_post_request(int fd, Server *server, std::string header)
         return getSpecificRespond(fd, server, "400.html", server->createBadResponse);
     }
     // Check if we already have a file transfer in progress
+    //---------------------------------
     if (server->fileTransfers.find(fd) != server->fileTransfers.end())
     {
         // Continue the existing transfer
-        return continueFileTransferPost(fd, server);
+        return continueFileTransferPost(fd, server); //?? 
     }
-    std::cout << "--> " << returnTargetFromRequest(pair_request.first, "Content-Type").second << std::endl;
+    //--------------------------------
     std::string filePath = server->parseRequest(pair_request.first, server);
-    std::cout << filePath << std::endl;
-    if (canBeOpen(filePath) && getFileType(filePath) == 2)
+    std::cout << "--------------------" << std::endl;
+    std::cout << pair_request.second << std::endl;
+    std::cout << "--------------------" << std::endl;
+    if (canBeOpen(filePath))
     {
-        return handleFileRequest_post(fd, server, filePath);
+        // std::cout << filePath << std::endl;
+        // exit(404);
+        // return handleFileRequest_post(fd, server, filePath); //???
+        return 0; 
     }
     else
     { 
