@@ -278,9 +278,9 @@ int Server::handle_post_request(int fd, Server *server, std::string header)
     }
     //--------------------------------
     std::string filePath = server->parseRequest(pair_request.first, server);
-    std::cout << "--------------------" << std::endl;
-    std::cout << pair_request.second << std::endl;
-    std::cout << "--------------------" << std::endl;
+    // std::cout << "--------------------" << std::endl;
+    // std::cout << pair_request.second << std::endl;
+    // std::cout << "--------------------" << std::endl;
     if (canBeOpen(filePath))
     {
         // std::cout << filePath << std::endl;

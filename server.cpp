@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:14 by mmad              #+#    #+#             */
-/*   Updated: 2025/04/08 09:04:02 by mmad             ###   ########.fr       */
+/*   Updated: 2025/04/08 10:15:58 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -309,20 +309,16 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
             {
                 buffer[bytes] = '\0';
                 request = buffer;
-                // std::cout << "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh\n";
-                // std::cout << events[i].data.fd << std::endl;
-                send_buffers[events[i].data.fd] += request;
-                // std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&\n";
-                // std::cout << send_buffers[events[i].data.fd] << std::endl;
-                // std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&\n";
+                send_buffers[events[i].data.fd] = request;
+                // if (send_buffers[events[i].data.fd].find("POST") != std::string::npos){
+                // }
             }
         }
         else if (events[i].events & EPOLLOUT)
         {
-            // std::cout << "******************************\n";
-            // std::cout << events[i].data.fd << std::endl;
-            // std::cout << "******************************\n";
-
+            std::cout << "*********************\n";
+            std::cout << send_buffers[events[i].data.fd] << std::endl;
+            std::cout << "*********************\n";
             // Check if we have an ongoing file transfer
             if (server->fileTransfers.find(events[i].data.fd) != server->fileTransfers.end())
             {
@@ -330,24 +326,17 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
                     return std::cerr << "Failed to continue file transfer" << std::endl, EXIT_FAILURE;
                 continue;
             }
-
-            // Otherwise process new request
-            /*
-            dsfdfs
-            */
             request = send_buffers[events[i].data.fd];
-            // std::cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$\n";
-            // std::cout << request << std::endl;
-            // std::cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$\n";
             if (request.empty())
                 continue;
-
             if (request.find("POST") != std::string::npos)
             {
+               
+                // exit(0);
                 if (server->handle_post_request(events[i].data.fd, server, request) == -1)
                     return EXIT_FAILURE;
             }
-            else if (request.find("DELETE") != std::string::npos)
+            if (request.find("DELETE") != std::string::npos)
             {
                 if (server->handle_delete_request(events[i].data.fd, server, request) == -1)
                     return EXIT_FAILURE;
@@ -357,8 +346,7 @@ int handleClientConnections(Server *server, int listen_sock, struct epoll_event 
                 if (server->serve_file_request(events[i].data.fd, server, request) == -1)
                     return EXIT_FAILURE;
             }
-            else if (request.find("PUT") != std::string::npos || request.find("PATCH") != std::string::npos 
-                || request.find("HEAD") != std::string::npos || request.find("OPTIONS") != std::string::npos)
+            else if (request.find("PUT") != std::string::npos || request.find("PATCH") != std::string::npos || request.find("HEAD") != std::string::npos || request.find("OPTIONS") != std::string::npos)
             {
                 if (server->processMethodNotAllowed(events[i].data.fd, server) == -1)
                     return EXIT_FAILURE;

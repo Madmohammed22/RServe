@@ -6,7 +6,7 @@
 /*   By: mmad <mmad@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 03:11:18 by mmad              #+#    #+#             */
-/*   Updated: 2025/04/06 14:02:27 by mmad             ###   ########.fr       */
+/*   Updated: 2025/04/08 09:31:44 by mmad             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,6 +64,7 @@ struct FileTransferState {
     bool isComplete;
     int socket;
     int saveFd;
+    int flag;
     std::set<std::string> knownPaths;
     FileTransferState() : offset(0), fileSize(0), isComplete(false) {}
 };
